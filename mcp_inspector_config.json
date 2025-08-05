@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ragspace": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://localhost:8000/gradio_api/mcp/"],
+      "env": {}
+    }
+  }
+} 
