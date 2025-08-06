@@ -10,6 +10,7 @@ from typing import List, Dict, Optional, Any
 from urllib.parse import urlparse
 import logging
 
+from ..config import CrawlerConfig
 from .crawler_interface import (
     CrawlerInterface, CrawlResult, CrawledItem, ContentType
 )
@@ -23,24 +24,31 @@ class GitHubCrawler(CrawlerInterface):
         """Initialize GitHub crawler"""
         super().__init__(config)
         
+        # Load configuration from environment
+        github_config = CrawlerConfig.get_github_config()
+        
         # GitHub API configuration
-        self.token = os.getenv("GITHUB_TOKEN")
-        self.base_url = "https://api.github.com"
+        self.token = github_config["token"]
+        self.base_url = github_config["base_url"]
         self.headers = {
             "Accept": "application/vnd.github.v3+json",
-            "User-Agent": "RAGSpace/1.0"
+            "User-Agent": github_config["user_agent"]
         }
         
         if self.token:
             self.headers["Authorization"] = f"Bearer {self.token}"
             logger.info("✅ GitHub crawler initialized with token")
         else:
-            logger.warning("⚠️ GitHub crawler initialized without token (limited rate)")
+            if github_config["rate_limit_warning"]:
+                logger.warning("⚠️ GitHub crawler initialized without token (limited rate)")
         
-        # Default configuration
-        self.config.setdefault("file_types", [".md", ".py", ".js", ".ts", ".txt", ".rst", ".adoc"])
-        self.config.setdefault("max_file_size", 50000)
-        self.config.setdefault("skip_patterns", ["node_modules", ".git", "__pycache__"])
+        # Update configuration with environment settings
+        self.config.update({
+            "file_types": github_config["file_types"],
+            "max_file_size": github_config["max_file_size"],
+            "skip_patterns": github_config["skip_patterns"],
+            "max_depth": github_config["max_depth"]
+        })
     
     def can_handle(self, url: str) -> bool:
         """Check if this crawler can handle the given URL"""

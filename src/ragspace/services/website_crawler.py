@@ -10,6 +10,7 @@ from typing import List, Dict, Optional, Any
 import logging
 import re
 
+from ..config import CrawlerConfig
 from .crawler_interface import (
     CrawlerInterface, CrawlResult, CrawledItem, ContentType
 )
@@ -23,13 +24,20 @@ class WebsiteCrawler(CrawlerInterface):
         """Initialize website crawler"""
         super().__init__(config)
         
-        # Default configuration
-        self.config.setdefault("max_depth", 2)
-        self.config.setdefault("max_pages", 10)
-        self.config.setdefault("skip_patterns", ["#", "javascript:", "mailto:"])
-        self.config.setdefault("content_selectors", ["main", "article", ".content", "#content"])
-        self.config.setdefault("title_selectors", ["h1", "title"])
-        self.config.setdefault("user_agent", "RAGSpace/1.0")
+        # Load configuration from environment
+        website_config = CrawlerConfig.get_website_config()
+        
+        # Update configuration with environment settings
+        self.config.update({
+            "max_depth": website_config["max_depth"],
+            "max_pages": website_config["max_pages"],
+            "skip_patterns": website_config["skip_patterns"],
+            "content_selectors": website_config["content_selectors"],
+            "title_selectors": website_config["title_selectors"],
+            "user_agent": website_config["user_agent"],
+            "timeout": website_config["timeout"],
+            "max_content_size": website_config["max_content_size"]
+        })
         
         self.session = requests.Session()
         self.session.headers.update({
@@ -110,7 +118,7 @@ class WebsiteCrawler(CrawlerInterface):
     def get_page_info(self, url: str) -> Optional[Dict[str, Any]]:
         """Get information about a single page"""
         try:
-            response = self.session.get(url, timeout=10)
+            response = self.session.get(url, timeout=self.config["timeout"])
             response.raise_for_status()
             
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -261,7 +269,7 @@ class WebsiteCrawler(CrawlerInterface):
     def should_skip_item(self, item: CrawledItem) -> bool:
         """Check if an item should be skipped based on configuration"""
         # Skip if content is too large
-        if len(item.content) > 50000:  # 50KB limit
+        if len(item.content) > self.config["max_content_size"]:
             return True
         
         # Skip if name matches skip patterns

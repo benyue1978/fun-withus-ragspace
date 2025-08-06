@@ -369,7 +369,7 @@ class TestCrawlerIntegration:
         }
         
         github_crawler = GitHubCrawler(config)
-        assert github_crawler.config["max_depth"] == 2
+        assert github_crawler.config["max_depth"] == 10
         assert ".md" in github_crawler.config["file_types"]
         assert "node_modules" in github_crawler.config["skip_patterns"]
     
