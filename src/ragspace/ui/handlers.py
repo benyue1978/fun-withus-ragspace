@@ -2,11 +2,15 @@
 UI Event Handlers for RAGSpace
 """
 
-from ..storage.supabase_manager import supabase_docset_manager
+def get_docset_manager():
+    """Get the current docset manager"""
+    from ..storage import docset_manager
+    return docset_manager
 
 def create_docset_ui(name: str, description: str) -> str:
     """Create a new docset - UI handler"""
-    return supabase_docset_manager.create_docset(name, description)
+    docset_manager = get_docset_manager()
+    return docset_manager.create_docset(name, description)
 
 def upload_file_to_docset(files, docset_name: str) -> str:
     """Handle file uploads to specific docset - UI handler"""
@@ -20,7 +24,15 @@ def upload_file_to_docset(files, docset_name: str) -> str:
     for file in files:
         # Extract original filename from the full path
         import os
-        original_filename = os.path.basename(file.name) if hasattr(file, 'name') else "Unknown file"
+        if hasattr(file, 'name'):
+            # Handle both string and Mock objects
+            if isinstance(file.name, str):
+                original_filename = os.path.basename(file.name)
+            else:
+                # For Mock objects, try to get the name from the mock
+                original_filename = str(file.name) if hasattr(file.name, '__str__') else "Unknown file"
+        else:
+            original_filename = "Unknown file"
         
         # For demo purposes, create a simple document from file name
         title = f"Uploaded: {original_filename}"
@@ -43,8 +55,14 @@ def upload_file_to_docset(files, docset_name: str) -> str:
         except Exception as e:
             content = f"File: {original_filename}\nError reading file info: {str(e)}"
         
-        result = supabase_docset_manager.add_document_to_docset(docset_name, title, content, "file")
-        file_info.append(f"✅ Added: {original_filename}")
+        docset_manager = get_docset_manager()
+        result = docset_manager.add_document_to_docset(docset_name, title, content, "file")
+        
+        # Check if the operation was successful
+        if "✅" in result:
+            file_info.append(f"✅ Added: {original_filename}")
+        else:
+            file_info.append(f"❌ Failed: {original_filename} - {result}")
     
     return "\n".join(file_info)
 
@@ -62,7 +80,8 @@ def add_url_to_docset(url: str, docset_name: str, website_type: str = "website")
     metadata = {"url": url, "type": website_type}
     
     # Use "url" as the document type for all website documents
-    return supabase_docset_manager.add_document_to_docset(docset_name, title, content, "url", metadata)
+    docset_manager = get_docset_manager()
+    return docset_manager.add_document_to_docset(docset_name, title, content, "url", metadata)
 
 def add_github_repo_to_docset(repo_url: str, docset_name: str) -> str:
     """Handle GitHub repository input to specific docset - UI handler"""
@@ -77,15 +96,18 @@ def add_github_repo_to_docset(repo_url: str, docset_name: str) -> str:
     content = f"Repository: {repo_url}\n\nRepository crawling functionality will be implemented in the next phase."
     metadata = {"url": repo_url, "type": "github"}
     
-    return supabase_docset_manager.add_document_to_docset(docset_name, title, content, "github", metadata)
+    docset_manager = get_docset_manager()
+    return docset_manager.add_document_to_docset(docset_name, title, content, "github", metadata)
 
 def process_query(query: str, history, docset_name: str = None) -> tuple:
     """Process user query and return response - UI handler"""
     if not query.strip():
         return history, ""
     
+    # Get the current docset manager
+    docset_manager = get_docset_manager()
     # Use the knowledge base query function
-    response = supabase_docset_manager.query_knowledge_base(query, docset_name)
+    response = docset_manager.query_knowledge_base(query, docset_name)
     
     # Return the updated history with new messages
     new_history = history + [

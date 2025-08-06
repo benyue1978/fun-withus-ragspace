@@ -1,28 +1,40 @@
 """
-DocSet Manager for RAGSpace
+Mock DocSet Manager for RAGSpace (Testing)
 """
 
 import time
 from typing import Dict, Optional
 from ..models import DocSet, Document
+from . import StorageInterface
 
-class DocSetManager:
-    """Manages DocSets and their operations"""
+class MockDocsetManager(StorageInterface):
+    """Mock DocSet Manager for testing - implements StorageInterface"""
     
     def __init__(self):
         self.docsets: Dict[str, DocSet] = {}
     
     def create_docset(self, name: str, description: str = "") -> str:
         """Create a new docset"""
+        if not name.strip():
+            return f"DocSet name cannot be empty."
+        
         if name in self.docsets:
             return f"DocSet '{name}' already exists."
         
         self.docsets[name] = DocSet(name, description)
         return f"✅ DocSet '{name}' created successfully."
     
-    def get_docset(self, name: str) -> Optional[DocSet]:
-        """Get a docset by name"""
-        return self.docsets.get(name)
+    def get_docset_by_name(self, name: str) -> Optional[Dict]:
+        """Get a docset by name - returns dict for compatibility with Supabase"""
+        docset = self.docsets.get(name)
+        if docset:
+            return {
+                "id": docset.name,  # Use name as id for mock compatibility
+                "name": docset.name,
+                "description": docset.description,
+                "created_at": docset.metadata.get('created_at', time.time())
+            }
+        return None
     
     def list_docsets(self) -> str:
         """List all docsets"""
@@ -42,13 +54,16 @@ class DocSetManager:
     def add_document_to_docset(self, docset_name: str, title: str, content: str, 
                               doc_type: str = "file", metadata: Optional[Dict] = None) -> str:
         """Add a document to a specific docset"""
+        if not docset_name.strip():
+            return f"DocSet name cannot be empty."
+        
         if docset_name not in self.docsets:
             return f"DocSet '{docset_name}' not found. Please create it first."
         
         doc = Document(title, content, doc_type, metadata)
         self.docsets[docset_name].add_document(doc)
         
-        return f"✅ Document '{title}' added to docset '{docset_name}'. Total documents: {len(self.docsets[docset_name].documents)}"
+        return f"✅ Document '{title}' added to docset '{docset_name}'."
     
     def list_documents_in_docset(self, docset_name: str) -> str:
         """List all documents in a specific docset"""
@@ -102,6 +117,10 @@ class DocSetManager:
         else:
             docset_info = f" in docset '{docset_name}'" if docset_name else ""
             return f"No documents found matching '{query}'{docset_info}. Try adding more documents to the knowledge base."
+    
+    def get_docsets_dict(self) -> Dict[str, Dict]:
+        """Get all docsets as a dictionary (for UI compatibility)"""
+        return {name: self.get_docset_by_name(name) for name in self.docsets.keys()}
 
-# Global instance
-docset_manager = DocSetManager() 
+# Global instance for testing
+mock_docset_manager = MockDocsetManager() 

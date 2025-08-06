@@ -1,5 +1,5 @@
 """
-Supabase DocSet Manager for RAGSpace
+Supabase DocSet Manager for RAGSpace (Production)
 """
 
 import os
@@ -7,12 +7,13 @@ import time
 from typing import Dict, Optional, List
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from . import StorageInterface
 
 # Load environment variables
 load_dotenv()
 
-class SupabaseDocsetManager:
-    """Manages DocSets and their operations using Supabase"""
+class SupabaseDocsetManager(StorageInterface):
+    """Manages DocSets and their operations using Supabase - implements StorageInterface"""
     
     def __init__(self):
         """Initialize Supabase client"""
@@ -193,5 +194,5 @@ class SupabaseDocsetManager:
             print(f"❌ Error getting docsets dict: {e}")
             return {}
 
-# Global instance
-supabase_docset_manager = SupabaseDocsetManager() 
+# Global instance - removed to avoid initialization on import
+# supabase_docset_manager = SupabaseDocsetManager() 

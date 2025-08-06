@@ -1,9 +1,14 @@
 """
-Chat Interface Tab Component
+Chat Interface UI Component
 """
 
 import gradio as gr
-from src.ragspace.storage.supabase_manager import supabase_docset_manager
+
+def get_docset_manager():
+    """Get the current docset manager"""
+    from src.ragspace.storage import docset_manager
+    return docset_manager
+
 from src.ragspace.ui.handlers import process_query, clear_chat
 
 def create_chat_interface_tab():
@@ -93,7 +98,7 @@ def create_chat_interface_tab():
         # Connect chat interactions
         def update_chat_docset_list():
             """Update chat DocSet dropdown"""
-            docsets = supabase_docset_manager.get_docsets_dict()
+            docsets = get_docset_manager().get_docsets_dict()
             choices = list(docsets.keys()) if docsets else []
             return gr.Dropdown(choices=choices)
         

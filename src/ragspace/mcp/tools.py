@@ -2,14 +2,20 @@
 MCP Tools for RAGSpace
 """
 
-from src.ragspace.storage.supabase_manager import supabase_docset_manager
 import gradio as gr
+
+def get_docset_manager():
+    """Get the current docset manager"""
+    from src.ragspace.storage import docset_manager
+    return docset_manager
 
 def list_docset():
     """List all docsets"""
     try:
+        # Get the current docset manager
+        docset_manager = get_docset_manager()
         # Get the raw docsets dictionary
-        docsets = supabase_docset_manager.get_docsets_dict()
+        docsets = docset_manager.get_docsets_dict()
         if not docsets:
             return "No docsets found."
         
@@ -30,8 +36,10 @@ def ask(query: str, docset: str = None):
         if not query.strip():
             return "Please provide a query."
         
-        # Use the Supabase manager to query the knowledge base
-        response = supabase_docset_manager.query_knowledge_base(query, docset)
+        # Get the current docset manager
+        docset_manager = get_docset_manager()
+        # Use the docset manager to query the knowledge base
+        response = docset_manager.query_knowledge_base(query, docset)
         return response
     except Exception as e:
         return f"Error processing query: {str(e)}" 

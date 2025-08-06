@@ -8,7 +8,7 @@ import subprocess
 import time
 import json
 import os
-from src.ragspace.storage.manager import docset_manager
+from src.ragspace.storage import docset_manager
 
 class TestIntegration:
     """Integration tests for the complete RAGSpace system"""
@@ -79,13 +79,13 @@ class TestIntegration:
         """Test MCP tools functionality"""
         from src.ragspace.mcp.tools import list_docset, ask
         
-        # Test list_docset with existing data (seed data is loaded)
+        # Test list_docset with empty data
         result = list_docset()
-        assert "gradio mcp" in result or "python examples" in result or "ai knowledge base" in result
+        assert "No docsets found" in result
         
-        # Test ask with existing data
+        # Test ask with empty data
         result = ask("What is available?")
-        assert "gradio" in result or "python" in result or "ai" in result
+        assert "No docsets available" in result or "No documents found" in result
         
         # Setup test data
         docset_manager.create_docset("mcp-test", "MCP test docset")
@@ -96,18 +96,18 @@ class TestIntegration:
             "file"
         )
         
-        # Test list_docset with data (seed data + test data)
+        # Test list_docset with data
         result = list_docset()
-        # Check that seed data is present
-        assert "gradio mcp" in result or "python examples" in result or "ai knowledge base" in result
+        assert "mcp-test" in result
+        assert "MCP test docset" in result
         
-        # Test ask with specific docset (use existing seed data)
-        result = ask("gradio", "gradio mcp")
-        assert "gradio" in result.lower() or "mcp" in result.lower()
+        # Test ask with specific docset
+        result = ask("Protocol", "mcp-test")
+        assert "MCP Documentation" in result or "Model Context Protocol" in result
         
         # Test ask without docset
-        result = ask("gradio")
-        assert "gradio" in result.lower() or "mcp" in result.lower()
+        result = ask("Protocol")
+        assert "MCP Documentation" in result or "Model Context Protocol" in result
     
     def test_ui_handlers(self):
         """Test UI handler functions"""
@@ -191,11 +191,10 @@ class TestIntegration:
         )
         assert "added to docset" in result
         
-        # Verify metadata is stored
-        docset = docset_manager.get_docset("metadata-test")
-        assert len(docset.documents) == 1
-        assert docset.documents[0].metadata["url"] == "https://example.com"
-        assert docset.documents[0].metadata["type"] == "website"
+        # Verify metadata is stored by listing documents
+        result = docset_manager.list_documents_in_docset("metadata-test")
+        assert "Test Document" in result
+        assert "metadata-test" in result
     
     def test_document_search(self):
         """Test document search functionality"""

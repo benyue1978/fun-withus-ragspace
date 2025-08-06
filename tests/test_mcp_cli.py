@@ -7,7 +7,7 @@ import subprocess
 import json
 import time
 import os
-from src.ragspace.storage.manager import docset_manager
+from src.ragspace.storage import docset_manager
 
 class TestMCPCLI:
     """Tests for MCP command line interface"""

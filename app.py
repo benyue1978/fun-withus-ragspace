@@ -18,6 +18,9 @@ from src.ragspace.ui.components import (
 # Import MCP tools
 from src.ragspace.mcp.tools import expose_mcp_tools
 
+# Import storage management
+from src.ragspace.storage import use_supabase
+
 # Load environment variables
 load_dotenv()
 
@@ -117,6 +120,9 @@ def create_gradio_interface():
 def main():
     """Main application entry point"""
     try:
+        # Switch to Supabase storage for production
+        use_supabase()
+        
         # Check if we're in development mode
         is_dev = os.getenv("DEV_MODE", "false").lower() == "true"
         
