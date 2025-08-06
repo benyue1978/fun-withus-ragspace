@@ -7,11 +7,77 @@
 - **📚 Knowledge Base Management**: Upload files, add websites, and import GitHub repositories
 - **💬 AI Chat Interface**: Query your knowledge base with natural language
 - **🔗 MCP Integration**: Connect with Cursor, Claude Desktop, and other LLM clients
+- **🎨 Modern UI**: Tabbed interface with sidebar layout and responsive design
 - **🚀 Easy Deployment**: One-click deployment to Render, Railway, or Hugging Face Spaces
+
+## Project Structure
+
+```
+fun-withus-ragspace/
+├── src/
+│   └── ragspace/
+│       ├── __init__.py
+│       ├── models/
+│       │   ├── __init__.py
+│       │   ├── document.py      # Document model
+│       │   └── docset.py        # DocSet model
+│       ├── storage/
+│       │   ├── __init__.py
+│       │   └── manager.py       # DocSetManager
+│       ├── ui/
+│       │   ├── __init__.py
+│       │   ├── handlers.py      # UI event handlers
+│       │   └── components/      # UI components
+│       │       ├── __init__.py
+│       │       ├── knowledge_management.py
+│       │       ├── chat_interface.py
+│       │       └── mcp_tools.py
+│       └── mcp/
+│           ├── __init__.py
+│           └── tools.py         # MCP tool definitions
+├── app.py              # Main application entry point
+├── dev.py              # Development server with auto-reload
+├── pyproject.toml      # Poetry project configuration
+├── Makefile            # Simple command aliases
+├── Dockerfile         # Docker configuration
+├── tests/             # Test files
+└── README.md          # This file
+```
 
 ## Quick Start
 
 ### Local Development
+
+#### Using Poetry (Recommended)
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/ragspace.git
+   cd ragspace
+   ```
+
+2. **Install Poetry (if not already installed)**
+   ```bash
+   curl -sSL https://install.python-poetry.org | python3 -
+   ```
+
+3. **Install dependencies**
+   ```bash
+   poetry install
+   ```
+
+4. **Run the application**
+   ```bash
+   poetry run python app.py
+   # Or activate the environment first:
+   poetry shell
+   python app.py
+   ```
+
+5. **Open in browser**
+   Navigate to `http://localhost:8000`
+
+#### Using pip (Alternative)
 
 1. **Clone the repository**
    ```bash
@@ -99,25 +165,34 @@ You can test the MCP server using the official MCP Inspector tool in command-lin
 
 4. **Call a tool**
    ```bash
-   mcp-inspector --config mcp_inspector_config.json --server ragspace --cli --method tools/call --tool-name list_documents --params '{}'
+   # List all docsets
+   mcp-inspector --config mcp_inspector_config.json --server ragspace --cli --method tools/call --tool-name list_docset --params '{}'
+   
+   # Ask a question
+   mcp-inspector --config mcp_inspector_config.json --server ragspace --cli --method tools/call --tool-name ask --params '{"query": "What is available?", "docset": null}'
+   
+   # Create a docset
+   mcp-inspector --config mcp_inspector_config.json --server ragspace --cli --method tools/call --tool-name create_docset_ui --params '{"name": "gradio mcp", "description": "Gradio MCP integration"}'
    ```
 
 ### Available MCP Tools
 
 The following tools are available through the MCP server:
 
-- `upload_file` - Handle file uploads
-- `add_url` - Handle URL input for web scraping
-- `add_github_repo` - Handle GitHub repository input
-- `list_documents` - List all documents in the knowledge base
-- `process_query` - Process user query and return response
-- `process_query_1` - Alternative process query tool
-- `clear_chat` - Clear the chat history
+**Core DocSet Tools:**
+- `list_docset` - List all docsets
+- `ask` - Ask a question (with optional docset parameter)
+
+> **Note**: Only the core DocSet tools are exposed to MCP clients. UI management tools are hidden from MCP to keep the interface clean and focused.
 
 ### Testing Steps
 
 1. **Start the Gradio server**
    ```bash
+   # Using Poetry
+   poetry run python app.py
+   
+   # Using pip
    source venv/bin/activate
    python app.py
    ```
@@ -134,7 +209,7 @@ The following tools are available through the MCP server:
 
 4. **Test tool execution**
    ```bash
-   mcp-inspector --config mcp_inspector_config.json --server ragspace --cli --method tools/call --tool-name list_documents --params '{}'
+   mcp-inspector --config mcp_inspector_config.json --server ragspace --cli --method tools/call --tool-name list_docset --params '{}'
    ```
 
 ### Connecting with Cursor
@@ -155,26 +230,6 @@ The following tools are available through the MCP server:
 1. **Open Claude Desktop**
 2. **Go to Settings** → **MCP Servers**
 3. **Add the same configuration as above**
-
-## Project Structure
-
-```
-ragspace/
-├── app.py              # Main application
-├── requirements.txt    # Python dependencies
-├── render.yaml        # Render deployment config
-├── Dockerfile         # Docker configuration
-├── README.md          # This file
-└── .soloflow/         # Project documentation
-    ├── overview.md
-    ├── requirements.md
-    ├── system_architecture.md
-    ├── tasks.md
-    ├── test_strategy.md
-    ├── ui_design.md
-    ├── deployment.md
-    └── notes.md
-```
 
 ## Development Phases
 
