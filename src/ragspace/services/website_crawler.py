@@ -258,6 +258,19 @@ class WebsiteCrawler(CrawlerInterface):
                 errors=[error_msg]
             )
     
+    def should_skip_item(self, item: CrawledItem) -> bool:
+        """Check if an item should be skipped based on configuration"""
+        # Skip if content is too large
+        if len(item.content) > 50000:  # 50KB limit
+            return True
+        
+        # Skip if name matches skip patterns
+        for pattern in self.config.get("skip_patterns", []):
+            if pattern in item.name:
+                return True
+        
+        return False
+    
     def get_rate_limit_info(self) -> Dict[str, Any]:
         """Get rate limit information for this crawler"""
         return {

@@ -8,6 +8,7 @@ from .github_service import GitHubService
 from .crawler_interface import CrawlerInterface, CrawlResult, CrawledItem, ContentType, CrawlerRegistry, crawler_registry
 from .github_crawler import GitHubCrawler
 from .website_crawler import WebsiteCrawler
+from .mock_crawler import MockCrawler
 
 # Register default crawlers
 # Note: Crawlers are registered lazily to ensure environment variables are loaded
@@ -27,5 +28,6 @@ __all__ = [
     "crawler_registry",
     "GitHubCrawler",
     "WebsiteCrawler",
+    "MockCrawler",
     "register_default_crawlers"
 ] 

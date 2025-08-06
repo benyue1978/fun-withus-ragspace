@@ -72,7 +72,8 @@ class MockDocsetManager(StorageInterface):
                 "content": doc.content,
                 "url": doc.metadata.get('url'),
                 "added_date": doc.metadata.get('added_date', time.time()),
-                "parent_id": doc.metadata.get('parent_id')
+                "parent_id": doc.metadata.get('parent_id'),
+                "metadata": doc.metadata
             }
             documents.append(doc_dict)
         
@@ -138,18 +139,80 @@ class MockDocsetManager(StorageInterface):
         return f"✅ Document '{title}' added to docset '{docset_name}'."
     
     def add_url_to_docset(self, url: str, docset_name: str, **kwargs) -> str:
-        """Mock URL to docset functionality"""
-        # For testing, just add a mock document
-        mock_content = f"Mock content from URL: {url}"
-        mock_metadata = {"url": url, "crawler_options": kwargs}
-        
-        return self.add_document_to_docset(
-            docset_name=docset_name,
-            title=f"Mock Document from {url}",
-            content=mock_content,
-            doc_type="website",
-            metadata=mock_metadata
-        )
+        """Mock URL to docset functionality using crawler system"""
+        try:
+            # Get docset by name
+            docset = self.get_docset_by_name(docset_name)
+            if not docset:
+                return f"DocSet '{docset_name}' not found. Please create it first."
+            
+            # Import crawler registry here to avoid circular imports
+            from src.ragspace.services import crawler_registry
+            
+            # Get appropriate crawler for URL
+            crawler = crawler_registry.get_crawler_for_url(url)
+            if not crawler:
+                supported_patterns = [c.get_supported_url_patterns() for c in crawler_registry.get_all_crawlers()]
+                return f"❌ No crawler available for URL: {url}\nSupported patterns: {supported_patterns}"
+            
+            # Crawl the URL
+            crawl_result = crawler.crawl(url, **kwargs)
+            
+            if not crawl_result.success:
+                return f"❌ Failed to crawl URL: {crawl_result.message}"
+            
+            # Convert crawled item to document format
+            root_item = crawl_result.root_item
+            if not root_item:
+                return "❌ No content found from URL"
+            
+            # Add the main document (parent)
+            parent_result = self.add_document_to_docset(
+                docset_name=docset_name,
+                title=root_item.name,
+                content=root_item.content,
+                doc_type=root_item.type.value,
+                metadata=root_item.metadata
+            )
+            
+            if "❌" in parent_result:
+                return parent_result
+            
+            # Get the parent document ID for child documents
+            parent_doc = None
+            for doc in self.docsets[docset_name].documents:
+                if doc.title == root_item.name:
+                    parent_doc = doc
+                    break
+            
+            if not parent_doc:
+                return f"❌ Failed to get parent document ID"
+            
+            parent_id = parent_doc.id
+            child_count = 0
+            
+            # Add child documents
+            for child in (root_item.children or []):
+                try:
+                    child_result = self.add_document_to_docset(
+                        docset_name=docset_name,
+                        title=child.name,
+                        content=child.content,
+                        doc_type=child.type.value,
+                        metadata=child.metadata,
+                        parent_id=parent_id
+                    )
+                    if "✅" in child_result:
+                        child_count += 1
+                except Exception as e:
+                    print(f"❌ Error adding child document {child.name}: {e}")
+                    continue
+            
+            return f"✅ {root_item.type.value.title()} '{root_item.name}' added to docset '{docset_name}' with {child_count} child documents."
+                
+        except Exception as e:
+            print(f"❌ Error adding URL content: {e}")
+            return f"❌ Error adding URL content to '{docset_name}': {str(e)}"
     
     def add_github_repo_to_docset(self, repo_url: str, docset_name: str, branch: str = "main") -> str:
         """Mock GitHub repo to docset functionality"""

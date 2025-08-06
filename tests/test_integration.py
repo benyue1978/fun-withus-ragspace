@@ -44,8 +44,10 @@ class TestIntegration:
         
         # Test list documents in docset
         result = docset_manager.list_documents_in_docset("test-docset")
-        assert "Test Document" in result
-        assert "test-docset" in result
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0]["name"] == "Test Document"
+        assert result[0]["type"] == "file"
     
     def test_query_functionality(self):
         """Test query functionality"""
@@ -169,12 +171,12 @@ class TestIntegration:
         
         # Test listing documents in non-existent docset
         result = docset_manager.list_documents_in_docset("non-existent")
-        assert "not found" in result
+        assert result == []
         
         # Test querying empty docset
         docset_manager.create_docset("empty", "Empty docset")
         result = docset_manager.list_documents_in_docset("empty")
-        assert "is empty" in result
+        assert result == []
     
     def test_document_metadata(self):
         """Test document metadata handling"""
@@ -193,8 +195,11 @@ class TestIntegration:
         
         # Verify metadata is stored by listing documents
         result = docset_manager.list_documents_in_docset("metadata-test")
-        assert "Test Document" in result
-        assert "metadata-test" in result
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0]["name"] == "Test Document"
+        assert result[0]["type"] == "website"
+        assert result[0]["url"] == "https://example.com"
     
     def test_document_search(self):
         """Test document search functionality"""
