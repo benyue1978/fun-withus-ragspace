@@ -2,7 +2,7 @@
 
 ## 概述
 
-RAGSpace使用Supabase作为后端数据库，基于PostgreSQL构建。数据库设计支持文档集合管理、文档存储和查询功能。
+RAGSpace使用Supabase作为后端数据库，基于PostgreSQL构建。数据库设计支持文档集合管理、文档存储和查询功能，包括父子文档关系和爬虫元数据存储。
 
 ## 数据库架构图
 
@@ -18,14 +18,17 @@ erDiagram
     DOCUMENTS {
         uuid id PK
         uuid docset_id FK
+        uuid parent_id FK
         text name
         text type
         text url
         text content
+        jsonb metadata
         timestamp added_date
     }
     
     DOCSETS ||--o{ DOCUMENTS : "contains"
+    DOCUMENTS ||--o{ DOCUMENTS : "parent-child"
 ```
 
 ## 表结构详情
@@ -63,35 +66,60 @@ INSERT INTO docsets (name, description) VALUES
 |--------|----------|------|------|
 | `id` | `uuid` | `PRIMARY KEY, DEFAULT gen_random_uuid()` | 主键，自动生成的UUID |
 | `docset_id` | `uuid` | `FOREIGN KEY REFERENCES docsets(id) ON DELETE CASCADE` | 外键，关联到docsets表 |
-| `name` | `text` | `NULL` | 文档名称 |
-| `type` | `text` | `CHECK (type IN ('file', 'url', 'github', 'website'))` | 文档类型 |
+| `parent_id` | `uuid` | `FOREIGN KEY REFERENCES documents(id) ON DELETE CASCADE` | 外键，支持父子文档关系 |
+| `name` | `text` | `NOT NULL` | 文档名称 |
+| `type` | `text` | `CHECK (type IN (...))` | 文档类型，支持多种爬虫类型 |
 | `url` | `text` | `NULL` | 文档来源URL |
 | `content` | `text` | `NULL` | 文档内容 |
+| `metadata` | `jsonb` | `DEFAULT '{}'` | 元数据，存储爬虫相关信息 |
 | `added_date` | `timestamp` | `DEFAULT now()` | 添加时间 |
+
+**支持的文档类型**:
+- `file` - 上传的文件
+- `url` - URL链接
+- `github` - GitHub相关（已弃用）
+- `website` - 网站内容
+- `github_file` - GitHub文件
+- `github_readme` - GitHub README
+- `github_repo` - GitHub仓库
+- `repository` - 仓库类型
+- `document` - 文档类型
+- `code` - 代码类型
+- `config` - 配置类型
+- `readme` - README类型
 
 **索引**:
 ```sql
 CREATE INDEX idx_documents_docset_id ON documents(docset_id);
+CREATE INDEX idx_documents_parent_id ON documents(parent_id);
 CREATE INDEX idx_documents_type ON documents(type);
 CREATE INDEX idx_documents_added_date ON documents(added_date);
+CREATE INDEX idx_documents_metadata ON documents USING GIN (metadata);
 ```
 
 **示例数据**:
 ```sql
-INSERT INTO documents (docset_id, name, type, url, content) VALUES 
+-- 父文档（GitHub仓库）
+INSERT INTO documents (docset_id, name, type, url, content, metadata) VALUES 
 (
     (SELECT id FROM docsets WHERE name = 'Python Documentation'),
-    'Python Basics',
-    'file',
-    NULL,
-    'Python is a high-level programming language...'
-),
+    'owner/repo',
+    'github_repo',
+    'https://github.com/owner/repo',
+    'Repository description...',
+    '{"crawler": "github", "repo": "owner/repo", "branch": "main"}'
+);
+
+-- 子文档（仓库中的文件）
+INSERT INTO documents (docset_id, parent_id, name, type, url, content, metadata) VALUES 
 (
-    (SELECT id FROM docsets WHERE name = 'API Reference'),
-    'REST API Guide',
-    'url',
-    'https://example.com/api/docs',
-    'This document describes the REST API endpoints...'
+    (SELECT id FROM docsets WHERE name = 'Python Documentation'),
+    (SELECT id FROM documents WHERE name = 'owner/repo' AND parent_id IS NULL),
+    'README.md',
+    'github_readme',
+    'https://github.com/owner/repo/blob/main/README.md',
+    '# Project Title\n\nProject description...',
+    '{"crawler": "github", "path": "README.md", "size": 1024}'
 );
 ```
 
@@ -104,6 +132,11 @@ INSERT INTO documents (docset_id, name, type, url, content) VALUES
 ALTER TABLE documents 
 ADD CONSTRAINT fk_documents_docset 
 FOREIGN KEY (docset_id) REFERENCES docsets(id) ON DELETE CASCADE;
+
+-- documents.parent_id 引用 documents.id (自引用)
+ALTER TABLE documents 
+ADD CONSTRAINT fk_documents_parent 
+FOREIGN KEY (parent_id) REFERENCES documents(id) ON DELETE CASCADE;
 ```
 
 ### 检查约束
@@ -111,18 +144,22 @@ FOREIGN KEY (docset_id) REFERENCES docsets(id) ON DELETE CASCADE;
 ```sql
 -- documents.type 字段的值限制
 ALTER TABLE documents 
-ADD CONSTRAINT chk_documents_type 
-CHECK (type IN ('file', 'url', 'github', 'website'));
+ADD CONSTRAINT documents_type_check 
+CHECK (type IN ('file', 'url', 'github', 'website', 'github_file', 'github_readme', 'github_repo', 'repository', 'document', 'code', 'config', 'readme'));
 ```
 
 ### 级联删除
 
-当删除一个文档集合时，相关的所有文档也会被自动删除：
+当删除一个文档集合时，相关的所有文档也会被自动删除。当删除一个父文档时，所有子文档也会被自动删除：
 
 ```sql
 -- 删除文档集合示例
 DELETE FROM docsets WHERE name = 'Python Documentation';
--- 这将自动删除所有关联的文档
+-- 这将自动删除所有关联的文档（包括父子关系）
+
+-- 删除父文档示例
+DELETE FROM documents WHERE name = 'owner/repo' AND parent_id IS NULL;
+-- 这将自动删除所有子文档
 ```
 
 ## 索引策略
@@ -136,19 +173,33 @@ DELETE FROM docsets WHERE name = 'Python Documentation';
    - **用途**: 快速查找特定文档集合的所有文档
    - **查询示例**: `SELECT * FROM documents WHERE docset_id = ?`
 
-2. **文档类型索引**
+2. **父文档ID索引**
+   ```sql
+   CREATE INDEX idx_documents_parent_id ON documents(parent_id);
+   ```
+   - **用途**: 快速查找父文档的所有子文档
+   - **查询示例**: `SELECT * FROM documents WHERE parent_id = ?`
+
+3. **文档类型索引**
    ```sql
    CREATE INDEX idx_documents_type ON documents(type);
    ```
    - **用途**: 快速筛选特定类型的文档
-   - **查询示例**: `SELECT * FROM documents WHERE type = 'file'`
+   - **查询示例**: `SELECT * FROM documents WHERE type = 'github_file'`
 
-3. **添加时间索引**
+4. **添加时间索引**
    ```sql
    CREATE INDEX idx_documents_added_date ON documents(added_date);
    ```
    - **用途**: 按时间排序和筛选文档
    - **查询示例**: `SELECT * FROM documents ORDER BY added_date DESC`
+
+5. **元数据GIN索引**
+   ```sql
+   CREATE INDEX idx_documents_metadata ON documents USING GIN (metadata);
+   ```
+   - **用途**: 快速查询元数据字段
+   - **查询示例**: `SELECT * FROM documents WHERE metadata->>'crawler' = 'github'`
 
 ### 复合索引（未来优化）
 
@@ -156,6 +207,119 @@ DELETE FROM docsets WHERE name = 'Python Documentation';
 -- 为复杂查询创建复合索引
 CREATE INDEX idx_documents_docset_type ON documents(docset_id, type);
 CREATE INDEX idx_documents_docset_date ON documents(docset_id, added_date);
+CREATE INDEX idx_documents_parent_type ON documents(parent_id, type);
+```
+
+## 元数据结构
+
+### 1. GitHub爬虫元数据
+
+```json
+{
+  "crawler": "github",
+  "repo": "owner/repo",
+  "branch": "main",
+  "path": "src/main.py",
+  "size": 1024,
+  "sha": "abc123...",
+  "url": "https://github.com/owner/repo/blob/main/src/main.py"
+}
+```
+
+### 2. 网站爬虫元数据
+
+```json
+{
+  "crawler": "website",
+  "url": "https://example.com",
+  "title": "Example Website",
+  "depth": 1,
+  "content_size": 2048
+}
+```
+
+### 3. 通用元数据
+
+```json
+{
+  "crawler": "mock",
+  "test": true,
+  "url": "https://example.com",
+  "added_by": "user123"
+}
+```
+
+## 查询示例
+
+### 1. 获取文档集合及其文档
+
+```sql
+-- 获取文档集合和文档数量
+SELECT 
+    d.name as docset_name,
+    d.description,
+    COUNT(doc.id) as document_count
+FROM docsets d
+LEFT JOIN documents doc ON d.id = doc.docset_id
+GROUP BY d.id, d.name, d.description;
+```
+
+### 2. 获取父子文档关系
+
+```sql
+-- 获取父文档及其子文档
+SELECT 
+    parent.name as parent_name,
+    parent.type as parent_type,
+    child.name as child_name,
+    child.type as child_type
+FROM documents parent
+LEFT JOIN documents child ON parent.id = child.parent_id
+WHERE parent.parent_id IS NULL
+ORDER BY parent.name, child.name;
+```
+
+### 3. 按爬虫类型查询
+
+```sql
+-- 获取GitHub爬虫创建的文档
+SELECT 
+    name,
+    type,
+    metadata->>'repo' as repository,
+    metadata->>'path' as file_path
+FROM documents 
+WHERE metadata->>'crawler' = 'github'
+ORDER BY added_date DESC;
+```
+
+### 4. 获取文档层次结构
+
+```sql
+-- 递归查询文档层次结构
+WITH RECURSIVE doc_tree AS (
+    -- 根文档（没有父文档的文档）
+    SELECT 
+        id, name, type, parent_id, 0 as level,
+        ARRAY[name] as path
+    FROM documents 
+    WHERE parent_id IS NULL
+    
+    UNION ALL
+    
+    -- 子文档
+    SELECT 
+        d.id, d.name, d.type, d.parent_id, dt.level + 1,
+        dt.path || d.name
+    FROM documents d
+    JOIN doc_tree dt ON d.parent_id = dt.id
+)
+SELECT 
+    level,
+    array_to_string(path, ' > ') as full_path,
+    type
+FROM doc_tree
+ORDER BY path;
 ```
 
 ## 行级安全策略 (RLS)
@@ -222,6 +386,14 @@ ALTER TABLE docsets ALTER COLUMN name SET NOT NULL;
 
 -- 文档名称不能为空
 ALTER TABLE documents ALTER COLUMN name SET NOT NULL;
+```
+
+### 自引用约束
+
+```sql
+-- 防止循环引用
+ALTER TABLE documents ADD CONSTRAINT chk_no_self_parent 
+CHECK (parent_id IS NULL OR parent_id != id);
 ```
 
 ## 扩展架构（未来计划）
@@ -341,6 +513,40 @@ CREATE POLICY "Allow public read access to documents" ON documents
 
 CREATE POLICY "Allow public insert access to documents" ON documents
   FOR INSERT WITH CHECK (true);
+```
+
+### 添加元数据支持
+
+**文件**: `supabase/migrations/20241202000000_add_github_children.sql`
+
+```sql
+-- 添加元数据字段
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS metadata jsonb DEFAULT '{}';
+
+-- 添加元数据索引
+CREATE INDEX IF NOT EXISTS idx_documents_metadata ON documents USING GIN (metadata);
+
+-- 更新类型检查约束
+ALTER TABLE documents DROP CONSTRAINT IF EXISTS documents_type_check;
+ALTER TABLE documents ADD CONSTRAINT documents_type_check 
+  CHECK (type IN ('file', 'url', 'github', 'website', 'github_file', 'github_readme'));
+```
+
+### 添加父子关系支持
+
+**文件**: `supabase/migrations/20241202000001_restructure_github_documents.sql`
+
+```sql
+-- 添加parent_id字段
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS parent_id uuid REFERENCES documents(id) ON DELETE CASCADE;
+
+-- 创建parent_id索引
+CREATE INDEX IF NOT EXISTS idx_documents_parent_id ON documents(parent_id);
+
+-- 更新类型检查约束
+ALTER TABLE documents DROP CONSTRAINT IF EXISTS documents_type_check;
+ALTER TABLE documents ADD CONSTRAINT documents_type_check 
+  CHECK (type IN ('file', 'url', 'github', 'website', 'github_file', 'github_readme', 'github_repo', 'repository', 'document', 'code', 'config', 'readme'));
 ```
 
 ### 种子数据

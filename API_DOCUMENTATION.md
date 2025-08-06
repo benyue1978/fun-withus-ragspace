@@ -37,10 +37,12 @@ CREATE TABLE docsets (
 CREATE TABLE documents (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   docset_id uuid REFERENCES docsets(id) ON DELETE CASCADE,
-  name text,
-  type text CHECK (type IN ('file', 'url', 'github', 'website')),
+  parent_id uuid REFERENCES documents(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  type text CHECK (type IN ('file', 'url', 'github', 'website', 'github_file', 'github_readme', 'github_repo', 'repository', 'document', 'code', 'config', 'readme')),
   url text,
   content text,
+  metadata jsonb DEFAULT '{}',
   added_date timestamp DEFAULT now()
 );
 ```
@@ -48,18 +50,36 @@ CREATE TABLE documents (
 **字段说明**:
 - `id`: 主键，UUID格式
 - `docset_id`: 外键，关联到docsets表
+- `parent_id`: 外键，支持父子文档关系（自引用）
 - `name`: 文档名称
-- `type`: 文档类型（file/url/github/website）
+- `type`: 文档类型，支持多种爬虫类型
 - `url`: 文档来源URL（可选）
 - `content`: 文档内容
+- `metadata`: 元数据，存储爬虫相关信息
 - `added_date`: 添加时间
+
+**支持的文档类型**:
+- `file` - 上传的文件
+- `url` - URL链接
+- `github` - GitHub相关（已弃用）
+- `website` - 网站内容
+- `github_file` - GitHub文件
+- `github_readme` - GitHub README
+- `github_repo` - GitHub仓库
+- `repository` - 仓库类型
+- `document` - 文档类型
+- `code` - 代码类型
+- `config` - 配置类型
+- `readme` - README类型
 
 ### 3. 索引
 
 ```sql
 CREATE INDEX idx_documents_docset_id ON documents(docset_id);
+CREATE INDEX idx_documents_parent_id ON documents(parent_id);
 CREATE INDEX idx_documents_type ON documents(type);
 CREATE INDEX idx_documents_added_date ON documents(added_date);
+CREATE INDEX idx_documents_metadata ON documents USING GIN (metadata);
 ```
 
 ## 数据模型
@@ -73,9 +93,10 @@ class Document:
     def __init__(self, title: str, content: str, doc_type: str = "file", metadata: Optional[Dict[str, Any]] = None):
         self.title = title
         self.content = content
-        self.doc_type = doc_type  # "file", "website", "github"
+        self.doc_type = doc_type  # 支持多种爬虫类型
         self.metadata = metadata or {}
         self.id = None
+        self.parent_id = None  # 支持父子关系
 ```
 
 **属性**:
@@ -84,6 +105,54 @@ class Document:
 - `doc_type`: 文档类型
 - `metadata`: 元数据字典
 - `id`: 文档ID
+- `parent_id`: 父文档ID（支持父子关系）
+
+### 2. 爬虫系统模型
+
+#### CrawlerInterface
+**位置**: `src/ragspace/services/crawler_interface.py`
+
+```python
+class CrawlerInterface:
+    def crawl(self, url: str, **kwargs) -> CrawlResult
+    def can_handle(self, url: str) -> bool
+    def get_supported_url_patterns(self) -> List[str]
+    def get_rate_limit_info(self) -> Dict[str, Any]
+    def should_skip_item(self, item: CrawledItem) -> bool
+```
+
+#### CrawledItem
+```python
+@dataclass
+class CrawledItem:
+    name: str
+    type: ContentType
+    url: str
+    content: str
+    metadata: Dict[str, Any]
+    children: List['CrawledItem']
+```
+
+#### CrawlResult
+```python
+@dataclass
+class CrawlResult:
+    success: bool
+    message: str
+    root_item: Optional[CrawledItem]
+    total_items: int
+    errors: List[str]
+```
+
+#### ContentType
+```python
+class ContentType(Enum):
+    REPOSITORY = "repository"
+    DOCUMENT = "document"
+    CODE = "code"
+    CONFIG = "config"
+    README = "readme"
+```
 
 ### 2. DocSet 模型
 
@@ -194,6 +263,8 @@ def __init__(self):
     supabase_url = os.getenv("SUPABASE_URL")
     supabase_key = os.getenv("SUPABASE_KEY")
     self.supabase: Client = create_client(supabase_url, supabase_key)
+    # 注册默认爬虫
+    register_default_crawlers()
 ```
 
 **核心方法**:
@@ -216,12 +287,13 @@ def get_docset_by_name(self, name: str) -> Optional[Dict]
 - **添加文档**
 ```python
 def add_document_to_docset(self, docset_name: str, title: str, content: str, 
-                          doc_type: str = "file", metadata: Optional[Dict] = None) -> str
+                          doc_type: str = "file", metadata: Optional[Dict] = None, 
+                          parent_id: Optional[str] = None) -> str
 ```
 
 - **列出文档**
 ```python
-def list_documents_in_docset(self, docset_name: str) -> str
+def list_documents_in_docset(self, docset_name: str) -> List[Dict]
 ```
 
 - **查询知识库**
@@ -232,6 +304,31 @@ def query_knowledge_base(self, query: str, docset_name: Optional[str] = None) ->
 - **获取文档集合字典**
 ```python
 def get_docsets_dict(self) -> Dict[str, Dict]
+```
+
+- **添加URL内容**
+```python
+def add_url_to_docset(self, url: str, docset_name: str, **kwargs) -> str
+```
+
+- **添加GitHub仓库**
+```python
+def add_github_repo_to_docset(self, repo_url: str, docset_name: str, branch: str = "main") -> str
+```
+
+- **获取文档及其子文档**
+```python
+def get_document_with_children(self, docset_name: str, document_name: str) -> Optional[Dict]
+```
+
+- **获取子文档**
+```python
+def get_child_documents(self, parent_id: str) -> List[Dict]
+```
+
+- **获取爬虫速率限制信息**
+```python
+def get_crawler_rate_limit(self, url: str) -> Dict[str, Any]
 ```
 
 ## 环境配置
@@ -353,9 +450,18 @@ CREATE POLICY "Allow public insert access to documents" ON documents
 ```
 fun-withus-ragspace/
 ├── src/ragspace/
+│   ├── config/           # 配置管理
+│   │   ├── __init__.py
+│   │   └── crawler_config.py  # 爬虫配置系统
 │   ├── models/           # 数据模型
 │   │   ├── document.py   # 文档模型
 │   │   └── docset.py     # 文档集合模型
+│   ├── services/         # 爬虫服务
+│   │   ├── __init__.py
+│   │   ├── crawler_interface.py  # 爬虫接口定义
+│   │   ├── github_crawler.py     # GitHub爬虫实现
+│   │   ├── website_crawler.py    # 网站爬虫实现
+│   │   └── mock_crawler.py       # Mock爬虫实现
 │   ├── storage/          # 存储管理
 │   │   ├── manager.py    # 内存存储管理器
 │   │   └── supabase_manager.py  # Supabase存储管理器
@@ -419,6 +525,37 @@ result = docset_manager.add_document_to_docset("My Docs", "README", "This is my 
 
 # 查询知识库
 result = docset_manager.query_knowledge_base("What is in my docs?", "My Docs")
+```
+
+### 4. 爬虫系统使用
+
+```python
+from src.ragspace.services import crawler_registry
+from src.ragspace.config import CrawlerConfig
+
+# 获取适合的爬虫
+url = "https://github.com/owner/repo"
+crawler = crawler_registry.get_crawler_for_url(url)
+
+if crawler:
+    # 爬取内容
+    result = crawler.crawl(url)
+    if result.success:
+        print(f"成功爬取: {result.root_item.name}")
+        print(f"子项目数量: {len(result.root_item.children)}")
+    else:
+        print(f"爬取失败: {result.message}")
+
+# 检查配置
+github_config = CrawlerConfig.get_github_config()
+if not github_config['token']:
+    print("警告: 未设置GitHub令牌")
+
+# 添加GitHub仓库
+result = docset_manager.add_github_repo_to_docset("owner/repo", "my-docset")
+
+# 添加网站内容
+result = docset_manager.add_url_to_docset("https://example.com", "my-docset")
 ```
 
 ## 错误处理

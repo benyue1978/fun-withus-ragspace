@@ -5,10 +5,12 @@
 ## Features
 
 - **📚 Knowledge Base Management**: Upload files, add websites, and import GitHub repositories
+- **🕷️ Web Crawling System**: Automatic content extraction from URLs and GitHub repositories
 - **💬 AI Chat Interface**: Query your knowledge base with natural language
 - **🔗 MCP Integration**: Connect with Cursor, Claude Desktop, and other LLM clients
 - **🎨 Modern UI**: Tabbed interface with sidebar layout and responsive design
 - **🗄️ Supabase Database**: Persistent storage with PostgreSQL and real-time capabilities
+- **⚙️ Configurable Crawlers**: Environment-based configuration for all crawlers
 - **🚀 Easy Deployment**: One-click deployment to Render, Railway, or Hugging Face Spaces
 
 ## Project Structure
@@ -18,25 +20,34 @@ fun-withus-ragspace/
 ├── src/
 │   └── ragspace/
 │       ├── __init__.py
+│       ├── config/                    # Configuration management
+│       │   ├── __init__.py
+│       │   └── crawler_config.py      # Crawler configuration system
 │       ├── models/
 │       │   ├── __init__.py
-│       │   ├── document.py      # Document model
-│       │   └── docset.py        # DocSet model
+│       │   ├── document.py            # Document model
+│       │   └── docset.py              # DocSet model
+│       ├── services/                   # Crawler services
+│       │   ├── __init__.py
+│       │   ├── crawler_interface.py   # Abstract crawler interface
+│       │   ├── github_crawler.py      # GitHub repository crawler
+│       │   ├── website_crawler.py     # General website crawler
+│       │   └── mock_crawler.py        # Mock crawler for testing
 │       ├── storage/
 │       │   ├── __init__.py
-│       │   ├── manager.py       # Memory-based DocSetManager
-│       │   └── supabase_manager.py  # Supabase-based DocSetManager
+│       │   ├── manager.py             # Memory-based DocSetManager
+│       │   └── supabase_manager.py    # Supabase-based DocSetManager
 │       ├── ui/
 │       │   ├── __init__.py
-│       │   ├── handlers.py      # UI event handlers
-│       │   └── components/      # UI components
+│       │   ├── handlers.py            # UI event handlers
+│       │   └── components/            # UI components
 │       │       ├── __init__.py
 │       │       ├── knowledge_management.py
 │       │       ├── chat_interface.py
 │       │       └── mcp_tools.py
 │       └── mcp/
 │           ├── __init__.py
-│           └── tools.py         # MCP tool definitions
+│           └── tools.py               # MCP tool definitions
 ├── app.py              # Main application entry point
 ├── dev.py              # Development server with auto-reload
 ├── pyproject.toml      # Poetry project configuration
@@ -52,6 +63,127 @@ fun-withus-ragspace/
 ├── env.example        # Environment variables template
 └── README.md          # This file
 ```
+
+## Data Structure
+
+### Database Schema
+
+#### 1. DocSets Table
+```sql
+CREATE TABLE docsets (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text UNIQUE NOT NULL,
+  description text,
+  created_at timestamp DEFAULT now()
+);
+```
+
+#### 2. Documents Table (with Parent-Child Support)
+```sql
+CREATE TABLE documents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  docset_id uuid REFERENCES docsets(id) ON DELETE CASCADE,
+  parent_id uuid REFERENCES documents(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  type text CHECK (type IN ('file', 'url', 'github', 'website', 'github_file', 'github_readme', 'github_repo', 'repository', 'document', 'code', 'config', 'readme')),
+  url text,
+  content text,
+  metadata jsonb DEFAULT '{}',
+  added_date timestamp DEFAULT now()
+);
+```
+
+### Crawler System
+
+The system includes a flexible crawler architecture with the following components:
+
+#### 1. Crawler Interface
+```python
+class CrawlerInterface:
+    def crawl(self, url: str, **kwargs) -> CrawlResult
+    def can_handle(self, url: str) -> bool
+    def get_supported_url_patterns(self) -> List[str]
+    def get_rate_limit_info(self) -> Dict[str, Any]
+```
+
+#### 2. Available Crawlers
+- **GitHubCrawler**: Fetches repository contents and individual files
+- **WebsiteCrawler**: Extracts content from general websites
+- **MockCrawler**: Provides test data for development
+
+#### 3. Crawler Registry
+```python
+class CrawlerRegistry:
+    def register(self, crawler: CrawlerInterface)
+    def get_crawler_for_url(self, url: str) -> Optional[CrawlerInterface]
+    def get_all_crawlers(self) -> List[CrawlerInterface]
+```
+
+### Configuration System
+
+All crawler settings are managed through environment variables:
+
+#### GitHub Crawler Configuration
+```bash
+GITHUB_TOKEN=your-github-token
+GITHUB_API_URL=https://api.github.com
+GITHUB_USER_AGENT=RAGSpace/1.0
+GITHUB_FILE_TYPES=.md,.py,.js,.ts,.txt,.rst,.adoc,.json,.yaml,.yml
+GITHUB_MAX_FILE_SIZE=50000
+GITHUB_SKIP_PATTERNS=node_modules,.git,__pycache__,.DS_Store,*.pyc
+GITHUB_MAX_DEPTH=10
+GITHUB_RATE_LIMIT_WARNING=true
+```
+
+#### Website Crawler Configuration
+```bash
+WEBSITE_MAX_DEPTH=3
+WEBSITE_MAX_PAGES=10
+WEBSITE_SKIP_PATTERNS=#,javascript:,mailto:,tel:,data:
+WEBSITE_CONTENT_SELECTORS=main,article,.content,#content,.post,.entry
+WEBSITE_TITLE_SELECTORS=h1,title,.title,.headline
+WEBSITE_USER_AGENT=RAGSpace/1.0
+WEBSITE_TIMEOUT=10
+WEBSITE_MAX_CONTENT_SIZE=50000
+```
+
+## API Endpoints
+
+### Web Interface APIs
+
+#### Knowledge Management
+- `create_docset_ui(name, description)` - Create new document collection
+- `upload_file_to_docset(files, docset_name)` - Upload files to collection
+- `add_url_to_docset(url, docset_name)` - Add website content
+- `add_github_repo_to_docset(repo_url, docset_name)` - Add GitHub repository
+
+#### Chat Interface
+- `process_query(query, history, docset_name)` - Process AI queries
+- `clear_chat()` - Clear chat history
+
+### MCP Tools
+
+#### Core Tools
+- `list_docset()` - List all document collections
+- `ask(query, docset)` - Query knowledge base
+
+#### Storage Management
+- `create_docset(name, description)` - Create document collection
+- `add_document_to_docset(docset_name, title, content, doc_type, metadata)` - Add document
+- `list_documents_in_docset(docset_name)` - List documents in collection
+- `query_knowledge_base(query, docset_name)` - Query specific collection
+
+### Crawler APIs
+
+#### GitHub Crawler
+- `crawl(url)` - Crawl GitHub repository
+- `get_rate_limit_info()` - Get API rate limit status
+- `get_repo_files(owner, repo, branch)` - Get repository file list
+
+#### Website Crawler
+- `crawl(url)` - Crawl website content
+- `extract_text_content(soup)` - Extract text from HTML
+- `find_links(soup, base_url)` - Find links on page
 
 ## Quick Start
 
@@ -113,12 +245,16 @@ fun-withus-ragspace/
 6. **Configure environment variables**
    ```bash
    cp env.example .env
-   # Edit .env with your Supabase credentials
+   # Edit .env with your Supabase credentials and crawler settings
    ```
 
-7. **Test Supabase integration**
+7. **Test the application**
    ```bash
-   poetry run python test_supabase_integration.py
+   # Run crawler tests
+   poetry run pytest tests/test_crawler_config.py -v
+   
+   # Run integration tests
+   poetry run pytest tests/test_ui_crawler.py -v
    ```
 
 8. **Run the application**
@@ -176,7 +312,10 @@ fun-withus-ragspace/
    - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `python app.py`
 
-4. **Deploy**
+4. **Set environment variables**
+   - Add all required environment variables from `env.example`
+
+5. **Deploy**
    - Click "Create Web Service"
    - Wait for deployment to complete
 
@@ -294,13 +433,14 @@ The following tools are available through the MCP server:
 - [x] Deployment configuration
 - [x] File upload interface
 
-### Phase 2: Data Ingestion (Next)
-- [ ] GitHub repository crawler
-- [ ] Web scraping functionality
-- [ ] Document processing pipeline
-- [ ] Vector embedding generation
+### Phase 2: Data Ingestion ✅
+- [x] GitHub repository crawler
+- [x] Web scraping functionality
+- [x] Document processing pipeline
+- [x] Configuration management system
+- [x] Parent-child document structure
 
-### Phase 3: RAG Implementation
+### Phase 3: RAG Implementation (Next)
 - [ ] Vector database integration
 - [ ] Semantic search functionality
 - [ ] LLM integration for responses
@@ -314,13 +454,50 @@ The following tools are available through the MCP server:
 
 ## Environment Variables
 
+### Required Variables
+
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `SUPABASE_URL` | Supabase project URL | (required) |
+| `SUPABASE_KEY` | Supabase API key | (required) |
 | `PORT` | Server port | `8000` |
 | `DEBUG` | Debug mode | `false` |
-| `OPENAI_API_KEY` | OpenAI API key | (required for Phase 3) |
-| `SUPABASE_URL` | Supabase project URL | (required for Phase 4) |
-| `SUPABASE_KEY` | Supabase API key | (required for Phase 4) |
+
+### GitHub Crawler Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GITHUB_TOKEN` | GitHub API token | (optional) |
+| `GITHUB_API_URL` | GitHub API base URL | `https://api.github.com` |
+| `GITHUB_USER_AGENT` | User agent string | `RAGSpace/1.0` |
+| `GITHUB_FILE_TYPES` | Supported file types | `.md,.py,.js,.ts,.txt,.rst,.adoc,.json,.yaml,.yml` |
+| `GITHUB_MAX_FILE_SIZE` | Maximum file size (bytes) | `50000` |
+| `GITHUB_SKIP_PATTERNS` | Patterns to skip | `node_modules,.git,__pycache__,.DS_Store,*.pyc` |
+| `GITHUB_MAX_DEPTH` | Maximum directory depth | `10` |
+| `GITHUB_RATE_LIMIT_WARNING` | Show rate limit warnings | `true` |
+
+### Website Crawler Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `WEBSITE_MAX_DEPTH` | Maximum crawl depth | `3` |
+| `WEBSITE_MAX_PAGES` | Maximum pages to crawl | `10` |
+| `WEBSITE_SKIP_PATTERNS` | URL patterns to skip | `#,javascript:,mailto:,tel:,data:` |
+| `WEBSITE_CONTENT_SELECTORS` | CSS selectors for content | `main,article,.content,#content,.post,.entry` |
+| `WEBSITE_TITLE_SELECTORS` | CSS selectors for titles | `h1,title,.title,.headline` |
+| `WEBSITE_USER_AGENT` | User agent string | `RAGSpace/1.0` |
+| `WEBSITE_TIMEOUT` | Request timeout (seconds) | `10` |
+| `WEBSITE_MAX_CONTENT_SIZE` | Maximum content size (bytes) | `50000` |
+
+### Global Crawler Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CRAWLER_ENABLE_LOGGING` | Enable crawler logging | `true` |
+| `CRAWLER_LOG_LEVEL` | Log level | `INFO` |
+| `CRAWLER_DEFAULT_TIMEOUT` | Default timeout (seconds) | `30` |
+| `CRAWLER_RETRY_ATTEMPTS` | Number of retry attempts | `3` |
+| `CRAWLER_RETRY_DELAY` | Delay between retries (seconds) | `1` |
 
 ## Contributing
 
