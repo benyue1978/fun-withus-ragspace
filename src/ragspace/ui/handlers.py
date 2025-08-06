@@ -83,7 +83,7 @@ def add_url_to_docset(url: str, docset_name: str, website_type: str = "website")
     docset_manager = get_docset_manager()
     return docset_manager.add_document_to_docset(docset_name, title, content, "url", metadata)
 
-def add_github_repo_to_docset(repo_url: str, docset_name: str) -> str:
+def add_github_repo_to_docset(repo_url: str, docset_name: str, branch: str = "main") -> str:
     """Handle GitHub repository input to specific docset - UI handler"""
     if not repo_url.strip():
         return "Please enter a valid GitHub repository URL"
@@ -91,13 +91,9 @@ def add_github_repo_to_docset(repo_url: str, docset_name: str) -> str:
     if not docset_name.strip():
         return "Please specify a docset name"
     
-    # For demo purposes, create a document from repo URL
-    title = f"GitHub Repository: {repo_url}"
-    content = f"Repository: {repo_url}\n\nRepository crawling functionality will be implemented in the next phase."
-    metadata = {"url": repo_url, "type": "github"}
-    
+    # Use the new GitHub service to fetch repository content
     docset_manager = get_docset_manager()
-    return docset_manager.add_document_to_docset(docset_name, title, content, "github", metadata)
+    return docset_manager.add_github_repo_to_docset(repo_url, docset_name, branch)
 
 def process_query(query: str, history, docset_name: str = None) -> tuple:
     """Process user query and return response - UI handler"""

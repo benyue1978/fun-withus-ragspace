@@ -8,6 +8,7 @@ from typing import Dict, Optional, List
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from . import StorageInterface
+from ..services import crawler_registry, register_default_crawlers
 
 # Load environment variables
 load_dotenv()
@@ -24,6 +25,10 @@ class SupabaseDocsetManager(StorageInterface):
             raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
         
         self.supabase: Client = create_client(supabase_url, supabase_key)
+        
+        # Register default crawlers with proper environment loading
+        register_default_crawlers()
+        
         print(f"✅ Supabase client initialized with URL: {supabase_url}")
     
     def create_docset(self, name: str, description: str = "") -> str:
@@ -83,7 +88,8 @@ class SupabaseDocsetManager(StorageInterface):
             return None
     
     def add_document_to_docset(self, docset_name: str, title: str, content: str, 
-                              doc_type: str = "file", metadata: Optional[Dict] = None) -> str:
+                              doc_type: str = "file", metadata: Optional[Dict] = None, 
+                              parent_id: Optional[str] = None) -> str:
         """Add a document to a specific docset"""
         try:
             # Get docset by name
@@ -97,7 +103,9 @@ class SupabaseDocsetManager(StorageInterface):
                 "name": title,
                 "type": doc_type,
                 "content": content,
-                "url": metadata.get("url") if metadata else None
+                "url": metadata.get("url") if metadata else None,
+                "metadata": metadata or {},
+                "parent_id": parent_id
             }
             
             # Insert document
@@ -110,35 +118,26 @@ class SupabaseDocsetManager(StorageInterface):
             print(f"❌ Error adding document: {e}")
             return f"❌ Error adding document to '{docset_name}': {str(e)}"
     
-    def list_documents_in_docset(self, docset_name: str) -> str:
+    def list_documents_in_docset(self, docset_name: str) -> List[Dict]:
         """List all documents in a specific docset"""
         try:
             # Get docset by name
             docset = self.get_docset_by_name(docset_name)
             if not docset:
-                return f"DocSet '{docset_name}' not found."
+                return []
             
             # Get documents for this docset
             result = self.supabase.table("documents").select("*").eq("docset_id", docset["id"]).order("added_date", desc=True).execute()
             
             if not result.data:
-                return f"DocSet '{docset_name}' is empty."
-            
-            response = f"📚 Documents in DocSet '{docset_name}':\n\n"
-            for i, doc in enumerate(result.data, 1):
-                response += f"{i}. {doc['name']}\n"
-                response += f"   Type: {doc['type']}\n"
-                if doc.get('url'):
-                    response += f"   URL: {doc['url']}\n"
-                response += f"   ID: {doc['id']}\n"
-                response += f"   Added: {doc['added_date']}\n\n"
+                return []
             
             print(f"✅ Listed {len(result.data)} documents in docset '{docset_name}'")
-            return response
+            return result.data
             
         except Exception as e:
             print(f"❌ Error listing documents: {e}")
-            return f"❌ Error listing documents in '{docset_name}': {str(e)}"
+            return []
     
     def query_knowledge_base(self, query: str, docset_name: Optional[str] = None) -> str:
         """Query the knowledge base"""
@@ -193,6 +192,157 @@ class SupabaseDocsetManager(StorageInterface):
         except Exception as e:
             print(f"❌ Error getting docsets dict: {e}")
             return {}
+    
+    def add_url_to_docset(self, url: str, docset_name: str, **kwargs) -> str:
+        """Add content from URL to a specific docset using appropriate crawler"""
+        try:
+            # Get docset by name
+            docset = self.get_docset_by_name(docset_name)
+            if not docset:
+                return f"DocSet '{docset_name}' not found. Please create it first."
+            
+            # Get appropriate crawler for URL
+            crawler = crawler_registry.get_crawler_for_url(url)
+            if not crawler:
+                supported_patterns = [c.get_supported_url_patterns() for c in crawler_registry.get_all_crawlers()]
+                return f"❌ No crawler available for URL: {url}\nSupported patterns: {supported_patterns}"
+            
+            # Crawl the URL
+            crawl_result = crawler.crawl(url, **kwargs)
+            
+            if not crawl_result.success:
+                return f"❌ Failed to crawl URL: {crawl_result.message}"
+            
+            # Convert crawled item to document format
+            root_item = crawl_result.root_item
+            if not root_item:
+                return "❌ No content found from URL"
+            
+            # Check if parent document already exists
+            existing_parent = self.supabase.table("documents").select("id").eq("name", root_item.name).eq("docset_id", docset["id"]).execute()
+            
+            if existing_parent.data:
+                print(f"⚠️ Parent document '{root_item.name}' already exists in docset '{docset_name}'")
+                parent_id = existing_parent.data[0]["id"]
+            else:
+                # Add the main document (parent)
+                parent_result = self.add_document_to_docset(
+                    docset_name=docset_name,
+                    title=root_item.name,
+                    content=root_item.content,
+                    doc_type=root_item.type.value,
+                    metadata=root_item.metadata
+                )
+                
+                if "❌" in parent_result:
+                    return parent_result
+                
+                # Get the parent document ID for child documents
+                parent_doc = self.supabase.table("documents").select("id").eq("name", root_item.name).eq("docset_id", docset["id"]).order("added_date", desc=True).limit(1).execute()
+                
+                if not parent_doc.data:
+                    return f"❌ Failed to get parent document ID"
+                
+                parent_id = parent_doc.data[0]["id"]
+            
+            # Get the parent document ID for child documents
+            parent_doc = self.supabase.table("documents").select("id").eq("name", root_item.name).eq("docset_id", docset["id"]).order("added_date", desc=True).limit(1).execute()
+            
+            if not parent_doc.data:
+                return f"❌ Failed to get parent document ID"
+            
+            parent_id = parent_doc.data[0]["id"]
+            child_count = 0
+            
+            # Add child documents
+            for child in (root_item.children or []):
+                try:
+                    # Check if child document already exists
+                    existing_child = self.supabase.table("documents").select("id").eq("name", child.name).eq("parent_id", parent_id).execute()
+                    
+                    if existing_child.data:
+                        print(f"⚠️ Child document '{child.name}' already exists")
+                        continue
+                    
+                    child_result = self.add_document_to_docset(
+                        docset_name=docset_name,
+                        title=child.name,
+                        content=child.content,
+                        doc_type=child.type.value,
+                        metadata=child.metadata,
+                        parent_id=parent_id
+                    )
+                    if "✅" in child_result:
+                        child_count += 1
+                except Exception as e:
+                    print(f"❌ Error adding child document {child.name}: {e}")
+                    continue
+            
+            return f"✅ {root_item.type.value.title()} '{root_item.name}' added to docset '{docset_name}' with {child_count} child documents."
+                
+        except Exception as e:
+            print(f"❌ Error adding URL content: {e}")
+            return f"❌ Error adding URL content to '{docset_name}': {str(e)}"
+    
+    def add_github_repo_to_docset(self, repo_url: str, docset_name: str, branch: str = "main") -> str:
+        """Add a GitHub repository to a specific docset (backward compatibility)"""
+        return self.add_url_to_docset(repo_url, docset_name, branch=branch)
+    
+    def get_crawler_rate_limit(self, crawler_name: str = None) -> Dict:
+        """Get rate limit information for crawlers"""
+        if crawler_name:
+            crawler = next((c for c in crawler_registry.get_all_crawlers() 
+                          if c.__class__.__name__.lower() == crawler_name.lower()), None)
+            if crawler:
+                return crawler.get_rate_limit_info()
+            return {"error": f"Crawler '{crawler_name}' not found"}
+        
+        # Return rate limit info for all crawlers
+        return {
+            crawler.__class__.__name__: crawler.get_rate_limit_info()
+            for crawler in crawler_registry.get_all_crawlers()
+        }
+    
+    def get_document_with_children(self, docset_name: str, parent_name: str = None) -> Dict:
+        """Get documents with their children (for GitHub repositories)"""
+        try:
+            docset = self.get_docset_by_name(docset_name)
+            if not docset:
+                return {"error": f"DocSet '{docset_name}' not found"}
+            
+            # Get parent documents (repositories)
+            parent_query = self.supabase.table("documents").select("*").eq("docset_id", docset["id"]).is_("parent_id", "null")
+            
+            if parent_name:
+                parent_query = parent_query.eq("name", parent_name)
+            
+            parent_docs = parent_query.execute()
+            
+            result = []
+            for parent in parent_docs.data:
+                # Get children for this parent
+                children = self.supabase.table("documents").select("*").eq("parent_id", parent["id"]).execute()
+                
+                parent_with_children = {
+                    **parent,
+                    "children": children.data
+                }
+                result.append(parent_with_children)
+            
+            return {"documents": result}
+            
+        except Exception as e:
+            print(f"❌ Error getting documents with children: {e}")
+            return {"error": str(e)}
+    
+    def get_child_documents(self, parent_id: str) -> List[Dict]:
+        """Get all child documents for a given parent"""
+        try:
+            result = self.supabase.table("documents").select("*").eq("parent_id", parent_id).execute()
+            return result.data
+        except Exception as e:
+            print(f"❌ Error getting child documents: {e}")
+            return []
 
 # Global instance - removed to avoid initialization on import
 # supabase_docset_manager = SupabaseDocsetManager() 

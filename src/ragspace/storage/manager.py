@@ -3,7 +3,7 @@ Mock DocSet Manager for RAGSpace (Testing)
 """
 
 import time
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from ..models import DocSet, Document
 from . import StorageInterface
 
@@ -51,38 +51,32 @@ class MockDocsetManager(StorageInterface):
         
         return result
     
-    def add_document_to_docset(self, docset_name: str, title: str, content: str, 
-                              doc_type: str = "file", metadata: Optional[Dict] = None) -> str:
-        """Add a document to a specific docset"""
-        if not docset_name.strip():
-            return f"DocSet name cannot be empty."
-        
-        if docset_name not in self.docsets:
-            return f"DocSet '{docset_name}' not found. Please create it first."
-        
-        doc = Document(title, content, doc_type, metadata)
-        self.docsets[docset_name].add_document(doc)
-        
-        return f"✅ Document '{title}' added to docset '{docset_name}'."
+
     
-    def list_documents_in_docset(self, docset_name: str) -> str:
+    def list_documents_in_docset(self, docset_name: str) -> List[Dict]:
         """List all documents in a specific docset"""
         if docset_name not in self.docsets:
-            return f"DocSet '{docset_name}' not found."
+            return []
         
         docset = self.docsets[docset_name]
         if not docset.documents:
-            return f"DocSet '{docset_name}' is empty."
+            return []
         
-        result = f"📚 Documents in DocSet '{docset_name}':\n\n"
-        for i, doc in enumerate(docset.documents, 1):
-            result += f"{i}. {doc.title}\n"
-            result += f"   Type: {doc.doc_type}\n"
-            if doc.metadata.get('url'):
-                result += f"URL: {doc.metadata['url']}\n"
-            result += f"   ID: {doc.id}\n\n"
+        # Convert documents to dict format for UI compatibility
+        documents = []
+        for doc in docset.documents:
+            doc_dict = {
+                "id": doc.id,
+                "name": doc.title,
+                "type": doc.doc_type,
+                "content": doc.content,
+                "url": doc.metadata.get('url'),
+                "added_date": doc.metadata.get('added_date', time.time()),
+                "parent_id": doc.metadata.get('parent_id')
+            }
+            documents.append(doc_dict)
         
-        return result
+        return documents
     
     def query_knowledge_base(self, query: str, docset_name: Optional[str] = None) -> str:
         """Query the knowledge base"""
@@ -121,6 +115,123 @@ class MockDocsetManager(StorageInterface):
     def get_docsets_dict(self) -> Dict[str, Dict]:
         """Get all docsets as a dictionary (for UI compatibility)"""
         return {name: self.get_docset_by_name(name) for name in self.docsets.keys()}
+    
+    def add_document_to_docset(self, docset_name: str, title: str, content: str, 
+                              doc_type: str = "file", metadata: Optional[Dict] = None, 
+                              parent_id: Optional[str] = None) -> str:
+        """Add a document to a specific docset with parent_id support"""
+        if not docset_name.strip():
+            return f"DocSet name cannot be empty."
+        
+        if docset_name not in self.docsets:
+            return f"DocSet '{docset_name}' not found. Please create it first."
+        
+        # Add parent_id to metadata if provided
+        if metadata is None:
+            metadata = {}
+        if parent_id:
+            metadata['parent_id'] = parent_id
+        
+        doc = Document(title, content, doc_type, metadata)
+        self.docsets[docset_name].add_document(doc)
+        
+        return f"✅ Document '{title}' added to docset '{docset_name}'."
+    
+    def add_url_to_docset(self, url: str, docset_name: str, **kwargs) -> str:
+        """Mock URL to docset functionality"""
+        # For testing, just add a mock document
+        mock_content = f"Mock content from URL: {url}"
+        mock_metadata = {"url": url, "crawler_options": kwargs}
+        
+        return self.add_document_to_docset(
+            docset_name=docset_name,
+            title=f"Mock Document from {url}",
+            content=mock_content,
+            doc_type="website",
+            metadata=mock_metadata
+        )
+    
+    def add_github_repo_to_docset(self, repo_url: str, docset_name: str, branch: str = "main") -> str:
+        """Mock GitHub repo to docset functionality"""
+        # For testing, just add a mock repository document
+        mock_content = f"Mock GitHub repository: {repo_url} (branch: {branch})"
+        mock_metadata = {"url": repo_url, "branch": branch, "type": "github"}
+        
+        return self.add_document_to_docset(
+            docset_name=docset_name,
+            title=f"Mock GitHub Repo: {repo_url}",
+            content=mock_content,
+            doc_type="github",
+            metadata=mock_metadata
+        )
+    
+    def get_document_with_children(self, docset_name: str, parent_name: str = None) -> Dict:
+        """Mock get documents with children functionality"""
+        if docset_name not in self.docsets:
+            return {"error": f"DocSet '{docset_name}' not found"}
+        
+        docset = self.docsets[docset_name]
+        parents = []
+        
+        # Find parent documents (those without parent_id)
+        for doc in docset.documents:
+            if not doc.metadata.get('parent_id'):
+                # Find children for this parent
+                children = []
+                for child_doc in docset.documents:
+                    if child_doc.metadata.get('parent_id') == doc.id:
+                        children.append({
+                            "id": child_doc.id,
+                            "name": child_doc.title,
+                            "type": child_doc.doc_type,
+                            "content": child_doc.content,
+                            "url": child_doc.metadata.get('url'),
+                            "added_date": child_doc.metadata.get('added_date', time.time())
+                        })
+                
+                parent_with_children = {
+                    "id": doc.id,
+                    "name": doc.title,
+                    "type": doc.doc_type,
+                    "content": doc.content,
+                    "url": doc.metadata.get('url'),
+                    "added_date": doc.metadata.get('added_date', time.time()),
+                    "children": children
+                }
+                parents.append(parent_with_children)
+        
+        return {"documents": parents}
+    
+    def get_child_documents(self, parent_id: str) -> List[Dict]:
+        """Mock get child documents functionality"""
+        children = []
+        for docset in self.docsets.values():
+            for doc in docset.documents:
+                if doc.metadata.get('parent_id') == parent_id:
+                    children.append({
+                        "id": doc.id,
+                        "name": doc.title,
+                        "type": doc.doc_type,
+                        "content": doc.content,
+                        "url": doc.metadata.get('url'),
+                        "added_date": doc.metadata.get('added_date', time.time())
+                    })
+        return children
+    
+    def get_crawler_rate_limit(self, crawler_name: str = None) -> Dict:
+        """Mock crawler rate limit functionality"""
+        return {
+            "GitHubCrawler": {
+                "remaining": 5000,
+                "limit": 5000,
+                "reset_time": time.time() + 3600
+            },
+            "WebsiteCrawler": {
+                "remaining": 1000,
+                "limit": 1000,
+                "reset_time": time.time() + 3600
+            }
+        }
 
 # Global instance for testing
 mock_docset_manager = MockDocsetManager() 

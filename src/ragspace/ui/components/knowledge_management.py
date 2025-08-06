@@ -18,52 +18,37 @@ from src.ragspace.ui.handlers import (
 )
 
 def create_knowledge_management_tab():
-    """Create the Knowledge Management tab with improved layout"""
+    """Create the knowledge management tab"""
     
-    # Define helper functions first
+    # Get initial docsets
+    initial_docsets = get_docset_manager().get_docsets_dict()
+    initial_choices = list(initial_docsets.keys()) if initial_docsets else []
+    initial_selected = initial_choices[0] if initial_choices else None
+    
     def get_docset_data(docset_name):
-        """Get docset and its documents data"""
-        if not docset_name:
-            return None, None, None
-        
+        """Get docset and documents data"""
         try:
             docset_manager = get_docset_manager()
             docset = docset_manager.get_docset_by_name(docset_name)
-            if not docset:
-                return None, None, None
-            
-            # For mock manager, we need to get documents differently
-            # Since mock doesn't have direct database access, we'll use the list_documents_in_docset method
-            documents_text = docset_manager.list_documents_in_docset(docset_name)
-            # Parse the text to extract document information
-            documents = []
-            lines = documents_text.split('\n')
-            for line in lines:
-                if line.strip().startswith('1.') or line.strip().startswith('2.') or line.strip().startswith('3.'):
-                    # Extract document info from the text format
-                    parts = line.strip().split(' ')
-                    if len(parts) >= 2:
-                        doc_name = ' '.join(parts[1:])
-                        documents.append({
-                            'name': doc_name,
-                            'type': 'file',  # Default for mock
-                            'url': None,
-                            'added_date': 'Unknown'
-                        })
-            
+            documents = docset_manager.list_documents_in_docset(docset_name) if docset_name else []
             return docset, documents, None
         except Exception as e:
-            return None, None, str(e)
+            return None, [], str(e)
     
     def convert_documents_to_dataframe(documents):
         """Convert documents to dataframe format"""
         doc_rows = []
         for doc in documents:
+            # Ensure doc is a dictionary
+            if not isinstance(doc, dict):
+                print(f"Warning: Skipping non-dict document: {type(doc)}")
+                continue
+                
             doc_rows.append([
-                doc['name'],
-                doc['type'],
+                doc.get('name', 'Unknown'),
+                doc.get('type', 'unknown'),
                 doc.get('url', 'N/A'),
-                doc['added_date']
+                doc.get('added_date', 'Unknown')
             ])
         return doc_rows
     
@@ -98,105 +83,89 @@ def create_knowledge_management_tab():
             with gr.Column(scale=1, elem_classes=["sidebar"]):
                 gr.Markdown("## 📁 DocSets")
                 
+                # DocSet management section
                 with gr.Group():
-                    gr.Markdown("### ➕ Create New DocSet")
+                    gr.Markdown("### 📚 DocSet Management")
                     
-                    docset_name_input = gr.Textbox(
-                        type="text",
-                        lines=1,
-                        placeholder="e.g., gradio mcp",
-                        label="DocSet Name"
-                    )
-                    docset_desc_input = gr.Textbox(
-                        type="text",
-                        lines=1,
-                        placeholder="Optional description",
-                        label="Description"
-                    )
-                    create_docset_button = gr.Button("Create DocSet", variant="primary", size="lg")
+                    # Create new DocSet
+                    with gr.Row():
+                        docset_name_input = gr.Textbox(
+                            label="📝 DocSet Name",
+                            placeholder="Enter docset name...",
+                            elem_classes=["input-modern"]
+                        )
+                        docset_desc_input = gr.Textbox(
+                            label="📄 Description",
+                            placeholder="Enter description...",
+                            elem_classes=["input-modern"]
+                        )
+                    
+                    with gr.Row():
+                        create_docset_button = gr.Button(
+                            "✨ Create DocSet", 
+                            variant="primary", 
+                            size="lg",
+                            elem_classes=["button-primary"]
+                        )
+                    
                     create_docset_output = gr.Textbox(
                         type="text",
-                        lines=1,
-                        label="Status",
+                        lines=2,
+                        label="📤 Status",
                         interactive=False
                     )
                 
+                # DocSet selection
+                gr.Markdown("### 🎯 Select DocSet")
+                # Get initial docset list
+                initial_docsets = get_docset_manager().get_docsets_dict()
+                initial_choices = list(initial_docsets.keys()) if initial_docsets else []
+                
+                docset_list = gr.Dropdown(
+                    choices=initial_choices,
+                    label="📚 Available DocSets",
+                    interactive=True,
+                    elem_classes=["input-modern"]
+                )
+                
+
+                
+                # DocSet actions
                 with gr.Group():
-                    gr.Markdown("### 📋 All DocSets")
-                    list_docsets_button = gr.Button("🔄 Refresh DocSets", variant="secondary", size="lg")
-                    # Get initial docsets
-                    initial_docsets = get_docset_manager().get_docsets_dict()
-                    initial_choices = list(initial_docsets.keys()) if initial_docsets else []
-                    initial_selected = initial_choices[0] if initial_choices else None
-                    
-                    docset_list = gr.Dropdown(
-                        choices=initial_choices,
-                        value=initial_selected,
-                        type="value",
-                        allow_custom_value=False,
-                        filterable=True,
-                        label="Select DocSet",
-                        interactive=True
-                    )
-                    # Get initial docset info
-                    if initial_selected:
-                        docset, documents, error = get_docset_data(initial_selected)
-                        if error:
-                            initial_docset_info = f"Error loading docset info: {error}"
-                        elif docset:
-                            initial_docset_info = create_docset_info_text(docset, documents, initial_selected)
-                        else:
-                            initial_docset_info = "Select a DocSet to view details"
-                    else:
-                        initial_docset_info = "No docsets available."
-                    
-                    list_docsets_output = gr.Textbox(
-                        type="text",
-                        lines=8,
-                        label="DocSets Info",
-                        interactive=False,
-                        value=initial_docset_info
+                    refresh_docs_button = gr.Button(
+                        "🔄 Refresh Documents", 
+                        variant="secondary", 
+                        size="lg",
+                        elem_classes=["button-secondary"]
                     )
             
             # Right main content - Documents and Add content
             with gr.Column(scale=3, elem_classes=["main-content"]):
-                gr.Markdown("## 📄 Documents")
+                gr.Markdown("## 📄 Documents", elem_classes=["markdown-enhanced"])
                 
-                # Get initial documents and info for selected docset
-                initial_documents = []
-                initial_selected_info = ""
-                if initial_selected:
-                    docset, documents, error = get_docset_data(initial_selected)
-                    if error:
-                        initial_selected_info = f"Error loading documents: {error}"
-                    elif docset:
-                        initial_selected_info = f"DocSet: {initial_selected}\nDocuments: {len(documents)}"
-                        initial_documents = convert_documents_to_dataframe(documents)
+                # Selected DocSet info with modern card
+                with gr.Group(elem_classes=["card"]):
+                    gr.Markdown("### 📊 DocSet Overview")
+                    selected_docset_info = gr.Textbox(
+                        type="text",
+                        lines=3,
+                        label="📋 Selected DocSet Info",
+                        interactive=False,
+                        elem_classes=["input-modern"]
+                    )
                 
-                # Selected DocSet info
-                selected_docset_info = gr.Textbox(
-                    type="text",
-                    lines=3,
-                    label="Selected DocSet Info",
-                    interactive=False,
-                    value=initial_selected_info
-                )
-                
-                # Documents list
-                documents_list = gr.Dataframe(
-                    value=initial_documents,
-                    headers=["Document Name", "Type", "URL", "Added Date"],
-                    row_count=(1, "dynamic"),
-                    col_count=(4, "fixed"),
-                    datatype=["str", "str", "str", "str"],
-                    type="pandas",
-                    label="Documents in Selected DocSet",
-                    interactive=False
-                )
-                
-                # DocSet actions
-                with gr.Group():
-                    refresh_docs_button = gr.Button("🔄 Refresh Documents", variant="secondary", size="lg")
+                # Documents list with modern styling
+                with gr.Group(elem_classes=["card"]):
+                    gr.Markdown("### 📚 Documents List")
+                    documents_list = gr.Dataframe(
+                        headers=["📄 Document Name", "📁 Type", "🔗 URL", "📅 Added Date"],
+                        row_count=(1, "dynamic"),
+                        col_count=(4, "fixed"),
+                        datatype=["str", "str", "str", "str"],
+                        type="pandas",
+                        label="📋 Documents in Selected DocSet",
+                        interactive=False
+                    )
                 
                 # Add content section - now collapsible
                 with gr.Accordion("📥 Add Content", open=False):
@@ -263,13 +232,20 @@ def create_knowledge_management_tab():
                             github_input = gr.Textbox(
                                 type="text",
                                 lines=1,
-                                placeholder="owner/repository",
+                                placeholder="owner/repository or https://github.com/owner/repo",
                                 label="GitHub Repository"
+                            )
+                            github_branch = gr.Textbox(
+                                type="text",
+                                lines=1,
+                                value="main",
+                                label="Branch (optional)",
+                                info="Leave as 'main' for most repositories"
                             )
                             github_button = gr.Button("Add Repository", variant="secondary", size="lg")
                             github_output = gr.Textbox(
                                 type="text",
-                                lines=1,
+                                lines=3,
                                 label="Repository Status",
                                 interactive=False
                             )
@@ -286,28 +262,43 @@ def create_knowledge_management_tab():
             docset, documents, error = get_docset_data(docset_name)
             
             if error:
-                return gr.Dataframe(value=[]), gr.Textbox(value=f"Error: {error}")
+                return gr.Dataframe(value=[])
             if not docset:
-                return gr.Dataframe(value=[]), gr.Textbox(value=f"DocSet '{docset_name}' not found" if docset_name else "")
+                return gr.Dataframe(value=[])
+            
+            # Ensure documents is a list
+            if not isinstance(documents, list):
+                return gr.Dataframe(value=[])
             
             doc_rows = convert_documents_to_dataframe(documents)
-            docset_info = f"DocSet: {docset_name}\nDocuments: {len(documents)}"
             
-            return gr.Dataframe(value=doc_rows), gr.Textbox(value=docset_info)
+            return gr.Dataframe(value=doc_rows)
         
         def update_docset_info(docset_name):
             """Update DocSets Info when a docset is selected"""
+            print(f"🔍 update_docset_info called with: {docset_name}")
+            
             if not docset_name:
+                print("  → No docset name provided")
                 return gr.Textbox(value="Select a DocSet to view details")
             
             docset, documents, error = get_docset_data(docset_name)
+            print(f"  → Got docset: {docset is not None}, documents: {len(documents) if isinstance(documents, list) else 'not list'}, error: {error}")
             
             if error:
+                print(f"  → Error: {error}")
                 return gr.Textbox(value=f"Error loading docset info: {error}")
             if not docset:
+                print(f"  → Docset not found: {docset_name}")
                 return gr.Textbox(value=f"DocSet '{docset_name}' not found")
             
+            # Ensure documents is a list
+            if not isinstance(documents, list):
+                print(f"  → Documents is not a list: {type(documents)}")
+                return gr.Textbox(value="Error: Invalid document data format")
+            
             info_text = create_docset_info_text(docset, documents, docset_name)
+            print(f"  → Generated info text: {len(info_text)} characters")
             return gr.Textbox(value=info_text)
         
         def update_target_docsets(docset_name):
@@ -317,15 +308,7 @@ def create_knowledge_management_tab():
             return gr.Textbox(value=docset_name), gr.Textbox(value=docset_name), gr.Textbox(value=docset_name)
         
         # Connect events
-        # Auto-load docsets on page load by triggering the refresh button
-        list_docsets_button.click(
-            lambda: get_docset_manager().list_docsets(), 
-            outputs=list_docsets_output,
-            api_name=False
-        ).then(update_docset_lists, outputs=[
-            docset_list
-        ], api_name=False)
-        
+        # Auto-load docsets on page load by triggering the create button (which will update the list)
         create_docset_button.click(
             create_docset_ui, 
             [docset_name_input, docset_desc_input], 
@@ -335,17 +318,22 @@ def create_knowledge_management_tab():
             docset_list
         ], api_name=False)
         
+        # Separate event bindings for better debugging
         docset_list.change(
             update_documents,
             docset_list,
-            [documents_list, selected_docset_info],
+            documents_list,
             api_name=False
-        ).then(
+        )
+        
+        docset_list.change(
             update_docset_info,
             docset_list,
-            list_docsets_output,
+            selected_docset_info,
             api_name=False
-        ).then(
+        )
+        
+        docset_list.change(
             update_target_docsets,
             docset_list,
             [upload_docset_name, url_docset_name, github_docset_name],
@@ -375,7 +363,7 @@ def create_knowledge_management_tab():
         # GitHub upload
         github_button.click(
             add_github_repo_to_docset, 
-            [github_input, github_docset_name], 
+            [github_input, github_docset_name, github_branch], 
             github_output,
             api_name=False
         ).then(update_docset_lists, outputs=[
@@ -386,6 +374,6 @@ def create_knowledge_management_tab():
         refresh_docs_button.click(
             update_documents,
             docset_list,
-            [documents_list, selected_docset_info],
+            documents_list,
             api_name=False
         ) 
