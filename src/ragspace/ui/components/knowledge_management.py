@@ -4,7 +4,7 @@ Knowledge Management UI Component
 
 import gradio as gr
 import time
-from src.ragspace.storage.manager import docset_manager
+from src.ragspace.storage.supabase_manager import supabase_docset_manager
 from src.ragspace.ui.handlers import (
     create_docset_ui,
     upload_file_to_docset,
@@ -191,7 +191,7 @@ def create_knowledge_management_tab():
         # Connect sidebar interactions
         def update_docset_lists():
             """Update both DocSet dropdowns with current list"""
-            docsets = docset_manager.docsets
+            docsets = supabase_docset_manager.get_docsets_dict()
             choices = list(docsets.keys()) if docsets else []
             return gr.Dropdown(choices=choices), gr.Dropdown(choices=choices), gr.Dropdown(choices=choices), gr.Dropdown(choices=choices)
         
@@ -201,20 +201,24 @@ def create_knowledge_management_tab():
                 return gr.Dataframe(value=[]), gr.Textbox(value="")
             
             try:
-                docset = docset_manager.get_docset(docset_name)
+                # Get documents from Supabase
+                docset = supabase_docset_manager.get_docset_by_name(docset_name)
                 if not docset:
                     return gr.Dataframe(value=[]), gr.Textbox(value=f"DocSet '{docset_name}' not found")
                 
-                docset_info = f"DocSet: {docset_name}\nDocuments: {len(docset.documents)}"
+                # Get documents for this docset
+                result = supabase_docset_manager.supabase.table("documents").select("*").eq("docset_id", docset["id"]).order("added_date", desc=True).execute()
+                
+                docset_info = f"DocSet: {docset_name}\nDocuments: {len(result.data)}"
                 
                 # Convert documents to dataframe format
                 doc_rows = []
-                for doc in docset.documents:
+                for doc in result.data:
                     doc_rows.append([
-                        doc.title,
-                        doc.doc_type,
-                        doc.metadata.get('url', 'N/A'),
-                        time.strftime("%Y-%m-%d %H:%M", time.localtime(doc.metadata.get('created_at', time.time())))
+                        doc['name'],
+                        doc['type'],
+                        doc.get('url', 'N/A'),
+                        doc['added_date']
                     ])
                 
                 return gr.Dataframe(value=doc_rows), gr.Textbox(value=docset_info)
@@ -232,7 +236,7 @@ def create_knowledge_management_tab():
         ], api_name=False)
         
         list_docsets_button.click(
-            lambda: docset_manager.list_docsets(), 
+            lambda: supabase_docset_manager.list_docsets(), 
             outputs=list_docsets_output,
             api_name=False
         ).then(update_docset_lists, outputs=[

@@ -3,7 +3,7 @@ MCP Tools Tab Component
 """
 
 import gradio as gr
-from src.ragspace.storage.manager import docset_manager
+from src.ragspace.storage.supabase_manager import supabase_docset_manager
 
 # Import MCP tools locally to avoid circular imports
 def _get_mcp_tools():
@@ -107,7 +107,7 @@ def create_mcp_tools_tab():
         
         def update_mcp_docset_list():
             """Update MCP test DocSet dropdown"""
-            docsets = docset_manager.docsets
+            docsets = supabase_docset_manager.get_docsets_dict()
             choices = list(docsets.keys()) if docsets else []
             return gr.Dropdown(choices=choices)
         

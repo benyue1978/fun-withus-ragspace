@@ -8,6 +8,7 @@
 - **💬 AI Chat Interface**: Query your knowledge base with natural language
 - **🔗 MCP Integration**: Connect with Cursor, Claude Desktop, and other LLM clients
 - **🎨 Modern UI**: Tabbed interface with sidebar layout and responsive design
+- **🗄️ Supabase Database**: Persistent storage with PostgreSQL and real-time capabilities
 - **🚀 Easy Deployment**: One-click deployment to Render, Railway, or Hugging Face Spaces
 
 ## Project Structure
@@ -23,7 +24,8 @@ fun-withus-ragspace/
 │       │   └── docset.py        # DocSet model
 │       ├── storage/
 │       │   ├── __init__.py
-│       │   └── manager.py       # DocSetManager
+│       │   ├── manager.py       # Memory-based DocSetManager
+│       │   └── supabase_manager.py  # Supabase-based DocSetManager
 │       ├── ui/
 │       │   ├── __init__.py
 │       │   ├── handlers.py      # UI event handlers
@@ -40,11 +42,33 @@ fun-withus-ragspace/
 ├── pyproject.toml      # Poetry project configuration
 ├── Makefile            # Simple command aliases
 ├── Dockerfile         # Docker configuration
+├── supabase/          # Supabase CLI configuration
+│   ├── config.toml    # Supabase configuration
+│   ├── migrations/    # Database migrations
+│   ├── seed/          # Seed data
+│   └── functions/     # Edge Functions (future)
+├── scripts/           # Utility scripts
 ├── tests/             # Test files
+├── env.example        # Environment variables template
 └── README.md          # This file
 ```
 
 ## Quick Start
+
+### Prerequisites
+
+1. **Supabase Project**: Create a new project at [supabase.com](https://supabase.com)
+2. **Supabase CLI**: Install Supabase CLI for local development
+   ```bash
+   # macOS
+   brew install supabase/tap/supabase
+   
+   # Windows
+   choco install supabase
+   
+   # Linux
+   curl -fsSL https://supabase.com/install.sh | sh
+   ```
 
 ### Local Development
 
@@ -66,7 +90,38 @@ fun-withus-ragspace/
    poetry install
    ```
 
-4. **Run the application**
+4. **Setup Supabase CLI**
+   ```bash
+   # Run the setup script
+   ./scripts/supabase_setup.sh
+   
+   # Or manually:
+   supabase init
+   supabase login
+   supabase link --project-ref your-project-ref
+   ```
+
+5. **Apply database migrations**
+   ```bash
+   # Apply migrations to remote database
+   supabase db push
+   
+   # Or apply to local database for testing
+   supabase db reset
+   ```
+
+6. **Configure environment variables**
+   ```bash
+   cp env.example .env
+   # Edit .env with your Supabase credentials
+   ```
+
+7. **Test Supabase integration**
+   ```bash
+   poetry run python test_supabase_integration.py
+   ```
+
+8. **Run the application**
    ```bash
    poetry run python app.py
    # Or activate the environment first:
@@ -74,7 +129,7 @@ fun-withus-ragspace/
    python app.py
    ```
 
-5. **Open in browser**
+9. **Open in browser**
    Navigate to `http://localhost:8000`
 
 #### Using pip (Alternative)

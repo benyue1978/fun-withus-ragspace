@@ -147,3 +147,7 @@ Thumbs.db
 uploads/
 logs/
 *.log
+
+# Supabase
+.temp
+mcp.json

@@ -1,7 +1,13 @@
 """
-Storage management for RAGSpace
+Storage module for RAGSpace
 """
 
-from .manager import DocSetManager
+from .manager import DocSetManager, docset_manager
+from .supabase_manager import SupabaseDocsetManager, supabase_docset_manager
 
-__all__ = ["DocSetManager"] 
+__all__ = [
+    "DocSetManager", 
+    "docset_manager",
+    "SupabaseDocsetManager", 
+    "supabase_docset_manager"
+] 

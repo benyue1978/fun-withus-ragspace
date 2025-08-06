@@ -2,22 +2,22 @@
 MCP Tools for RAGSpace
 """
 
-from src.ragspace.storage.manager import docset_manager
+from src.ragspace.storage.supabase_manager import supabase_docset_manager
 import gradio as gr
 
 def list_docset():
     """List all docsets"""
     try:
         # Get the raw docsets dictionary
-        docsets = docset_manager.docsets
+        docsets = supabase_docset_manager.get_docsets_dict()
         if not docsets:
             return "No docsets found."
         
         result = "Available DocSets:\n"
         for name, docset in docsets.items():
             result += f"- {name}"
-            if docset.description:
-                result += f": {docset.description}"
+            if docset.get('description'):
+                result += f": {docset['description']}"
             result += "\n"
         
         return result
@@ -30,13 +30,8 @@ def ask(query: str, docset: str = None):
         if not query.strip():
             return "Please provide a query."
         
-        # For now, return a simple response
-        # In the future, this will integrate with RAG pipeline
-        response = f"Query: {query}"
-        if docset:
-            response += f"\nDocSet: {docset}"
-        
-        response += "\n\nThis is a placeholder response. RAG functionality will be implemented soon."
+        # Use the Supabase manager to query the knowledge base
+        response = supabase_docset_manager.query_knowledge_base(query, docset)
         return response
     except Exception as e:
         return f"Error processing query: {str(e)}" 
@@ -47,13 +42,16 @@ def expose_mcp_tools():
     hidden_btn_list_docset.click(
         fn=list_docset,
         inputs=[],
-        outputs=[],
+        outputs=gr.Textbox(label="DocSets", visible=False),
         api_name="list_docset"
     )
     hidden_btn_ask = gr.Button("hidden", render=False)
     hidden_btn_ask.click(
         fn=ask,
-        inputs=[],
-        outputs=[],
+        inputs=[
+            gr.Textbox(label="Query", visible=False),
+            gr.Textbox(label="DocSet (optional)", visible=False)
+        ],
+        outputs=gr.Textbox(label="Answer", visible=False),
         api_name="ask"
     )
