@@ -104,13 +104,13 @@ def create_gradio_interface():
         # Footer
         gr.Markdown("---")
         gr.Markdown("""
-        ### 🚀 Features Coming Soon
-        - **RAG Pipeline**: Intelligent document processing and retrieval
-        - **Vector Search**: Semantic search across your knowledge base
-        - **Advanced Analytics**: Usage insights and performance metrics
-        - **Multi-user Support**: Team collaboration and sharing
-        - **API Integration**: RESTful API for external applications
-        """)    
+        ### 🚀 Current Features
+        - **Knowledge Management**: Create and manage document collections
+        - **File Upload**: Upload documents to your knowledge base
+        - **URL Integration**: Add websites and GitHub repositories
+        - **AI Chat**: Query your knowledge base with natural language
+        - **MCP Integration**: Model Context Protocol support for external tools
+        """)
 
         # MCP Tools - Define functions with api_name to control exposure
         expose_mcp_tools()

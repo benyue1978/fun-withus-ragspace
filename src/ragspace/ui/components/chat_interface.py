@@ -21,27 +21,24 @@ def create_chat_interface_tab():
                 gr.Markdown("## 💬 Chat Settings")
                 
                 # DocSet selection for chat
+                # Get initial docset list
+                initial_docsets = get_docset_manager().get_docsets_dict()
+                initial_choices = list(initial_docsets.keys()) if initial_docsets else []
+                
                 chat_docset_dropdown = gr.Dropdown(
                     label="🔍 Search in Specific DocSet",
-                    choices=[],
+                    choices=initial_choices,
                     interactive=True,
                     info="Leave empty to search all docsets"
                 )
+                
+                # Refresh docset list button
+                refresh_chat_docsets_button = gr.Button("🔄 Refresh DocSets", variant="secondary", size="sm")
                 
                 # Chat history management
                 with gr.Group():
                     gr.Markdown("### 📝 Chat History")
                     clear_chat_button = gr.Button("🗑️ Clear Chat")
-                    export_chat_button = gr.Button("📤 Export Chat")
-                
-                # Chat statistics
-                with gr.Group():
-                    gr.Markdown("### 📊 Statistics")
-                    chat_stats = gr.Textbox(
-                        label="Session Stats",
-                        value="Messages: 0\nQueries: 0\nDocSets Used: 0",
-                        interactive=False
-                    )
             
             # Main chat area
             with gr.Column(scale=3, elem_classes=["main-content"]):
@@ -64,40 +61,11 @@ def create_chat_interface_tab():
                         lines=2
                     )
                     send = gr.Button("Send", variant="primary", scale=1)
-                
-                # Quick actions
-                with gr.Row():
-                    quick_actions = gr.Dropdown(
-                        choices=[
-                            "What documents do I have?",
-                            "Summarize my knowledge base",
-                            "Find similar documents",
-                            "What are the main topics?",
-                            "Show me the latest additions"
-                        ],
-                        label="Quick Actions",
-                        value=None
-                    )
-                    quick_action_button = gr.Button("Use Action", variant="secondary")
-                
-                # Response details
-                with gr.Accordion("🔍 Response Details", open=False):
-                    response_source = gr.Textbox(
-                        label="Sources Used",
-                        interactive=False,
-                        lines=3
-                    )
-                    response_confidence = gr.Slider(
-                        minimum=0,
-                        maximum=1,
-                        value=0.8,
-                        label="Confidence Score",
-                        interactive=False
-                    )
         
         # Connect chat interactions
-        def update_chat_docset_list():
-            """Update chat DocSet dropdown"""
+        # Auto-update docset dropdown on page load
+        def load_chat_docsets():
+            """Load docsets into chat dropdown"""
             docsets = get_docset_manager().get_docsets_dict()
             choices = list(docsets.keys()) if docsets else []
             return gr.Dropdown(choices=choices)
@@ -106,7 +74,13 @@ def create_chat_interface_tab():
             """Process chat query with optional docset filtering"""
             return process_query(message, chat_history, docset_name)
         
-        # Connect events
+        # Refresh docset list button
+        refresh_chat_docsets_button.click(
+            load_chat_docsets,
+            outputs=[chat_docset_dropdown],
+            api_name=False
+        )
+        
         send.click(
             process_chat_query, 
             [msg, chatbot, chat_docset_dropdown], 

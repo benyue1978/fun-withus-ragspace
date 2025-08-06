@@ -69,12 +69,19 @@ def create_mcp_tools_tab():
                         placeholder="What documents do I have?",
                         scale=2
                     )
+                    # Get initial docset list for MCP testing
+                    initial_mcp_docsets = get_docset_manager().get_docsets_dict()
+                    initial_mcp_choices = list(initial_mcp_docsets.keys()) if initial_mcp_docsets else []
+                    
                     test_ask_docset = gr.Dropdown(
                         label="DocSet (optional)",
-                        choices=[],
+                        choices=initial_mcp_choices,
                         interactive=True,
                         scale=1
                     )
+                    
+                    # Refresh button for MCP docset list
+                    refresh_mcp_docsets_button = gr.Button("🔄 Refresh DocSets", variant="secondary", size="sm")
                     test_ask_button = gr.Button("Test ask")
                     test_ask_output = gr.Textbox(
                         label="Result",
@@ -116,6 +123,13 @@ def create_mcp_tools_tab():
             docsets = get_docset_manager().get_docsets_dict()
             choices = list(docsets.keys()) if docsets else []
             return gr.Dropdown(choices=choices)
+        
+        # Refresh MCP docset list button
+        refresh_mcp_docsets_button.click(
+            update_mcp_docset_list,
+            outputs=[test_ask_docset],
+            api_name=False
+        )
         
         test_list_docset_button.click(
             test_list_docset_tool,

@@ -194,10 +194,9 @@ def create_knowledge_management_tab():
                     interactive=False
                 )
                 
-                # Action buttons
-                with gr.Row():
+                # DocSet actions
+                with gr.Group():
                     refresh_docs_button = gr.Button("🔄 Refresh Documents", variant="secondary", size="lg")
-                    export_docset_button = gr.Button("📤 Export DocSet", variant="secondary", size="lg")
                 
                 # Add content section
                 gr.Markdown("## 📥 Add Content")
@@ -275,23 +274,6 @@ def create_knowledge_management_tab():
                             label="Repository Status",
                             interactive=False
                         )
-                
-                # Search section
-                gr.Markdown("### 🔍 Search in DocSet")
-                search_input = gr.Textbox(
-                    type="text",
-                    lines=1,
-                    placeholder="Search within the selected docset...",
-                    label="Search Documents",
-                    scale=3
-                )
-                search_button = gr.Button("Search", variant="secondary", size="lg", scale=1)
-                search_results = gr.Textbox(
-                    type="text",
-                    lines=5,
-                    label="Search Results",
-                    interactive=False
-                )
         
         # Connect sidebar interactions
         def update_docset_lists():
