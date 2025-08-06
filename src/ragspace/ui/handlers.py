@@ -18,16 +18,37 @@ def upload_file_to_docset(files, docset_name: str) -> str:
     
     file_info = []
     for file in files:
+        # Extract original filename from the full path
+        import os
+        original_filename = os.path.basename(file.name) if hasattr(file, 'name') else "Unknown file"
+        
         # For demo purposes, create a simple document from file name
-        title = f"Uploaded: {file.name}"
-        content = f"File: {file.name}\nSize: {file.size} bytes\nType: {file.type if hasattr(file, 'type') else 'Unknown'}"
+        title = f"Uploaded: {original_filename}"
+        
+        # Handle different file object types
+        try:
+            if hasattr(file, 'size'):
+                file_size = f"{file.size} bytes"
+            elif hasattr(file, 'name'):
+                file_size = "Unknown size"
+            else:
+                file_size = "Unknown size"
+            
+            if hasattr(file, 'type'):
+                file_type = file.type
+            else:
+                file_type = "Unknown"
+            
+            content = f"File: {original_filename}\nSize: {file_size}\nType: {file_type}"
+        except Exception as e:
+            content = f"File: {original_filename}\nError reading file info: {str(e)}"
         
         result = supabase_docset_manager.add_document_to_docset(docset_name, title, content, "file")
-        file_info.append(f"✅ Added: {file.name}")
+        file_info.append(f"✅ Added: {original_filename}")
     
     return "\n".join(file_info)
 
-def add_url_to_docset(url: str, docset_name: str, website_type: str = "docs") -> str:
+def add_url_to_docset(url: str, docset_name: str, website_type: str = "website") -> str:
     """Handle URL input for web scraping to specific docset - UI handler"""
     if not url.strip():
         return "Please enter a valid URL"
@@ -40,7 +61,8 @@ def add_url_to_docset(url: str, docset_name: str, website_type: str = "docs") ->
     content = f"URL: {url}\nType: {website_type}\n\nWeb scraping functionality will be implemented in the next phase."
     metadata = {"url": url, "type": website_type}
     
-    return supabase_docset_manager.add_document_to_docset(docset_name, title, content, "website", metadata)
+    # Use "url" as the document type for all website documents
+    return supabase_docset_manager.add_document_to_docset(docset_name, title, content, "url", metadata)
 
 def add_github_repo_to_docset(repo_url: str, docset_name: str) -> str:
     """Handle GitHub repository input to specific docset - UI handler"""

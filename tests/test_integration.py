@@ -135,7 +135,7 @@ class TestIntegration:
         assert "Added: test.txt" in result
         
         # Test add_url_to_docset
-        result = add_url_to_docset("https://example.com", "ui-test-unique", "docs")
+        result = add_url_to_docset("https://example.com", "ui-test-unique", "website")
         assert "added to docset" in result or "Error" in result
         
         # Test add_github_repo_to_docset
