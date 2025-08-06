@@ -198,82 +198,81 @@ def create_knowledge_management_tab():
                 with gr.Group():
                     refresh_docs_button = gr.Button("🔄 Refresh Documents", variant="secondary", size="lg")
                 
-                # Add content section
-                gr.Markdown("## 📥 Add Content")
-                
-                with gr.Tabs():
-                    # File upload tab
-                    with gr.Tab("📄 Upload Files"):
-                        upload_docset_name = gr.Textbox(
-                            value=initial_selected if initial_selected else "Select a DocSet from the sidebar",
-                            label="Target DocSet",
-                            interactive=False,
-                            visible=False
-                        )
-                        file_input = gr.File(
-                            file_count="multiple",
-                            file_types=[".txt", ".md", ".pdf", ".docx"],
-                            type="filepath",
-                            label="Upload Documents"
-                        )
-                        file_output = gr.Textbox(
-                            type="text",
-                            lines=1,
-                            label="Upload Status",
-                            interactive=False
-                        )
-                    
-                    # URL upload tab
-                    with gr.Tab("🌐 Add Website"):
-                        url_docset_name = gr.Textbox(
-                            value=initial_selected if initial_selected else "Select a DocSet from the sidebar",
-                            label="Target DocSet",
-                            interactive=False,
-                            visible=False
-                        )
-                        url_input = gr.Textbox(
-                            type="text",
-                            lines=1,
-                            placeholder="https://example.com/docs",
-                            label="Website URL"
-                        )
-                        website_type = gr.Dropdown(
-                            choices=[["website", "website"], ["github", "github"]],
-                            value="website",
-                            type="value",
-                            allow_custom_value=False,
-                            filterable=True,
-                            label="Website Type"
-                        )
-                        url_button = gr.Button("Add Website", variant="secondary", size="lg")
-                        url_output = gr.Textbox(
-                            type="text",
-                            lines=1,
-                            label="URL Status",
-                            interactive=False
-                        )
-                    
-                    # GitHub upload tab
-                    with gr.Tab("🐙 Add GitHub Repo"):
-                        github_docset_name = gr.Textbox(
-                            value=initial_selected if initial_selected else "Select a DocSet from the sidebar",
-                            label="Target DocSet",
-                            interactive=False,
-                            visible=False
-                        )
-                        github_input = gr.Textbox(
-                            type="text",
-                            lines=1,
-                            placeholder="owner/repository",
-                            label="GitHub Repository"
-                        )
-                        github_button = gr.Button("Add Repository", variant="secondary", size="lg")
-                        github_output = gr.Textbox(
-                            type="text",
-                            lines=1,
-                            label="Repository Status",
-                            interactive=False
-                        )
+                # Add content section - now collapsible
+                with gr.Accordion("📥 Add Content", open=False):
+                    with gr.Tabs():
+                        # File upload tab
+                        with gr.Tab("📄 Upload Files"):
+                            upload_docset_name = gr.Textbox(
+                                value=initial_selected if initial_selected else "Select a DocSet from the sidebar",
+                                label="Target DocSet",
+                                interactive=False,
+                                visible=False
+                            )
+                            file_input = gr.File(
+                                file_count="multiple",
+                                file_types=[".txt", ".md", ".pdf", ".docx"],
+                                type="filepath",
+                                label="Upload Documents"
+                            )
+                            file_output = gr.Textbox(
+                                type="text",
+                                lines=1,
+                                label="Upload Status",
+                                interactive=False
+                            )
+                        
+                        # URL upload tab
+                        with gr.Tab("🌐 Add Website"):
+                            url_docset_name = gr.Textbox(
+                                value=initial_selected if initial_selected else "Select a DocSet from the sidebar",
+                                label="Target DocSet",
+                                interactive=False,
+                                visible=False
+                            )
+                            url_input = gr.Textbox(
+                                type="text",
+                                lines=1,
+                                placeholder="https://example.com/docs",
+                                label="Website URL"
+                            )
+                            website_type = gr.Dropdown(
+                                choices=[["website", "website"], ["github", "github"]],
+                                value="website",
+                                type="value",
+                                allow_custom_value=False,
+                                filterable=True,
+                                label="Website Type"
+                            )
+                            url_button = gr.Button("Add Website", variant="secondary", size="lg")
+                            url_output = gr.Textbox(
+                                type="text",
+                                lines=1,
+                                label="URL Status",
+                                interactive=False
+                            )
+                        
+                        # GitHub upload tab
+                        with gr.Tab("🐙 Add GitHub Repo"):
+                            github_docset_name = gr.Textbox(
+                                value=initial_selected if initial_selected else "Select a DocSet from the sidebar",
+                                label="Target DocSet",
+                                interactive=False,
+                                visible=False
+                            )
+                            github_input = gr.Textbox(
+                                type="text",
+                                lines=1,
+                                placeholder="owner/repository",
+                                label="GitHub Repository"
+                            )
+                            github_button = gr.Button("Add Repository", variant="secondary", size="lg")
+                            github_output = gr.Textbox(
+                                type="text",
+                                lines=1,
+                                label="Repository Status",
+                                interactive=False
+                            )
         
         # Connect sidebar interactions
         def update_docset_lists():

@@ -49,7 +49,7 @@ def create_mcp_tools_tab():
                     interactive=False
                 )
             
-            with gr.Column(scale=2, elem_classes=["main-content"]):
+            with gr.Column(scale=3, elem_classes=["main-content"]):
                 gr.Markdown("## 🧪 MCP Tool Testing")
                 
                 # Test MCP tools

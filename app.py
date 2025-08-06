@@ -33,21 +33,20 @@ def create_gradio_interface():
     
     # Custom CSS for better styling
     custom_css = """
-    .gradio-container {
-        max-width: 1400px !important;
-    }
     .sidebar {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 15px;
         padding: 20px;
+        border-radius: 15px;
         margin: 10px;
-        color: white;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
     }
     .main-content {
-        background: #2d3748;
-        border-radius: 15px;
+        background: rgba(45, 55, 72, 0.95);
         padding: 20px;
+        border-radius: 15px;
         margin: 10px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        backdrop-filter: blur(10px);
         color: #e2e8f0;
     }
     .main-content .markdown {
@@ -88,10 +87,32 @@ def create_gradio_interface():
         margin: 3px 0;
         font-size: 0.9em;
     }
+    /* Accordion styling */
+    .accordion {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        margin: 10px 0;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    .accordion:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .accordion-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 20px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .accordion-header:hover {
+        background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+    }
     """
     
     # Create the interface
-    with gr.Blocks(title="RAGSpace - AI Knowledge Hub", theme=gr.themes.Soft(), css=custom_css) as demo:
+    with gr.Blocks(title="RAGSpace - AI Knowledge Hub", theme=gr.themes.Glass(), css=custom_css) as demo:
         gr.Markdown("# 🤖 RAGSpace - AI Knowledge Hub")
         gr.Markdown("Build and query your personal knowledge base with AI assistance.")
         
