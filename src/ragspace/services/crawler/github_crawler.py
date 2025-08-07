@@ -249,9 +249,9 @@ class GitHubCrawler(CrawlerInterface):
                     # Determine content type
                     content_type = self.determine_content_type(file_info["name"])
                     
-                    # Create crawled item
+                    # Create crawled item with owner/repo prefix to avoid conflicts across repositories
                     item = CrawledItem(
-                        title=file_info["path"],  # Use full path as title to avoid duplicates
+                        title=f"{owner}/{repo}/{file_info['path']}",  # Add owner/repo prefix to avoid conflicts
                         content=content,
                         url=file_info["download_url"] or file_info["url"],
                         content_type=content_type,

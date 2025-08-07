@@ -381,6 +381,72 @@ class TestGitHubCrawler:
                 pytest.fail(f"Wildcard pattern '{pattern}' caused regex error: {e}")
             except Exception as e:
                 pytest.fail(f"Wildcard pattern '{pattern}' caused unexpected error: {e}")
+    
+    @patch('src.ragspace.services.crawler.github_crawler.requests.get')
+    def test_different_repos_same_filename_no_conflict(self, mock_get):
+        """Test that documents from different repositories with same filename don't conflict"""
+        crawler = GitHubCrawler()
+        
+        # Mock GitHub API responses for two different repositories
+        mock_responses = [
+            # First repo: owner1/repo1
+            Mock(
+                status_code=200,
+                json=lambda: [
+                    {
+                        "name": "README.md",
+                        "path": "README.md",
+                        "type": "file",
+                        "download_url": "https://raw.githubusercontent.com/owner1/repo1/main/README.md",
+                        "url": "https://api.github.com/repos/owner1/repo1/contents/README.md",
+                        "size": 100
+                    }
+                ]
+            ),
+            # File content for first repo
+            Mock(
+                status_code=200,
+                text="Content from owner1/repo1 README"
+            ),
+            # Second repo: owner2/repo2  
+            Mock(
+                status_code=200,
+                json=lambda: [
+                    {
+                        "name": "README.md",
+                        "path": "README.md",
+                        "type": "file",
+                        "download_url": "https://raw.githubusercontent.com/owner2/repo2/main/README.md",
+                        "url": "https://api.github.com/repos/owner2/repo2/contents/README.md",
+                        "size": 100
+                    }
+                ]
+            ),
+            # File content for second repo
+            Mock(
+                status_code=200,
+                text="Content from owner2/repo2 README"
+            )
+        ]
+        
+        mock_get.side_effect = mock_responses
+        
+        # Crawl first repository
+        result1 = crawler.crawl("owner1/repo1")
+        assert result1.success is True
+        assert len(result1.items) == 1
+        assert result1.items[0].title == "owner1/repo1/README.md"
+        
+        # Crawl second repository
+        result2 = crawler.crawl("owner2/repo2")
+        assert result2.success is True
+        assert len(result2.items) == 1
+        assert result2.items[0].title == "owner2/repo2/README.md"
+        
+        # Verify that the titles are different even though both files are named README.md
+        assert result1.items[0].title != result2.items[0].title
+        assert result1.items[0].title == "owner1/repo1/README.md"
+        assert result2.items[0].title == "owner2/repo2/README.md"
 
 
 class TestWebsiteCrawler:
