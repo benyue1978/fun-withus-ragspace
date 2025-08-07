@@ -454,7 +454,7 @@ The following tools are available through the MCP server:
 
 ## Environment Variables
 
-### Required Variables
+### Required Variables Table
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -463,7 +463,7 @@ The following tools are available through the MCP server:
 | `PORT` | Server port | `8000` |
 | `DEBUG` | Debug mode | `false` |
 
-### GitHub Crawler Configuration
+### GitHub Crawler Configuration Table
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -476,7 +476,7 @@ The following tools are available through the MCP server:
 | `GITHUB_MAX_DEPTH` | Maximum directory depth | `10` |
 | `GITHUB_RATE_LIMIT_WARNING` | Show rate limit warnings | `true` |
 
-### Website Crawler Configuration
+### Website Crawler Configuration Table
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -489,7 +489,7 @@ The following tools are available through the MCP server:
 | `WEBSITE_TIMEOUT` | Request timeout (seconds) | `10` |
 | `WEBSITE_MAX_CONTENT_SIZE` | Maximum content size (bytes) | `50000` |
 
-### Global Crawler Configuration
+### Global Crawler Configuration Table
 
 | Variable | Description | Default |
 |----------|-------------|---------|
