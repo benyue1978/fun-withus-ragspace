@@ -2,6 +2,6 @@
 MCP Tools for RAGSpace
 """
 
-from .tools import list_docset, ask
+from .tools import list_docsets, ask
 
-__all__ = ["list_docset", "ask"] 
+__all__ = ["list_docsets", "ask"] 

@@ -109,13 +109,15 @@ class SupabaseDocsetManager(StorageInterface):
                 "content": content,
                 "url": metadata.get("url") if metadata else None,
                 "metadata": metadata or {},
-                "parent_id": parent_id
+                "parent_id": parent_id,
+                "embedding_status": "pending",  # Set initial embedding status
+                "embedding_updated_at": None
             }
             
             # Insert document
             result = self.supabase.table("documents").insert(doc_data).execute()
             
-            print(f"✅ Added document '{title}' to docset '{docset_name}'")
+            print(f"✅ Added document '{title}' to docset '{docset_name}' with pending embedding status")
             return f"✅ Document '{title}' added to docset '{docset_name}'."
             
         except Exception as e:
@@ -218,24 +220,28 @@ class SupabaseDocsetManager(StorageInterface):
             if not crawl_result.success:
                 return f"❌ Failed to crawl URL: {crawl_result.message}"
             
-            # Convert crawled item to document format
-            root_item = crawl_result.root_item
-            if not root_item:
+            # Convert crawled items to document format
+            items = crawl_result.items
+            if not items:
                 return "❌ No content found from URL"
             
+            # Get the root item (first item)
+            root_item = items[0]
+            child_items = items[1:] if len(items) > 1 else []
+            
             # Check if parent document already exists
-            existing_parent = self.supabase.table("documents").select("id").eq("name", root_item.name).eq("docset_id", docset["id"]).execute()
+            existing_parent = self.supabase.table("documents").select("id").eq("name", root_item.title).eq("docset_id", docset["id"]).execute()
             
             if existing_parent.data:
-                print(f"⚠️ Parent document '{root_item.name}' already exists in docset '{docset_name}'")
+                print(f"⚠️ Parent document '{root_item.title}' already exists in docset '{docset_name}'")
                 parent_id = existing_parent.data[0]["id"]
             else:
                 # Add the main document (parent)
                 parent_result = self.add_document_to_docset(
                     docset_name=docset_name,
-                    title=root_item.name,
+                    title=root_item.title,
                     content=root_item.content,
-                    doc_type=root_item.type.value,
+                    doc_type=root_item.content_type.value,
                     metadata=root_item.metadata
                 )
                 
@@ -243,47 +249,40 @@ class SupabaseDocsetManager(StorageInterface):
                     return parent_result
                 
                 # Get the parent document ID for child documents
-                parent_doc = self.supabase.table("documents").select("id").eq("name", root_item.name).eq("docset_id", docset["id"]).order("added_date", desc=True).limit(1).execute()
+                parent_doc = self.supabase.table("documents").select("id").eq("name", root_item.title).eq("docset_id", docset["id"]).order("added_date", desc=True).limit(1).execute()
                 
                 if not parent_doc.data:
                     return f"❌ Failed to get parent document ID"
                 
                 parent_id = parent_doc.data[0]["id"]
             
-            # Get the parent document ID for child documents
-            parent_doc = self.supabase.table("documents").select("id").eq("name", root_item.name).eq("docset_id", docset["id"]).order("added_date", desc=True).limit(1).execute()
-            
-            if not parent_doc.data:
-                return f"❌ Failed to get parent document ID"
-            
-            parent_id = parent_doc.data[0]["id"]
             child_count = 0
             
             # Add child documents
-            for child in (root_item.children or []):
+            for child in child_items:
                 try:
                     # Check if child document already exists
-                    existing_child = self.supabase.table("documents").select("id").eq("name", child.name).eq("parent_id", parent_id).execute()
+                    existing_child = self.supabase.table("documents").select("id").eq("name", child.title).eq("parent_id", parent_id).execute()
                     
                     if existing_child.data:
-                        print(f"⚠️ Child document '{child.name}' already exists")
+                        print(f"⚠️ Child document '{child.title}' already exists")
                         continue
                     
                     child_result = self.add_document_to_docset(
                         docset_name=docset_name,
-                        title=child.name,
+                        title=child.title,
                         content=child.content,
-                        doc_type=child.type.value,
+                        doc_type=child.content_type.value,
                         metadata=child.metadata,
                         parent_id=parent_id
                     )
                     if "✅" in child_result:
                         child_count += 1
                 except Exception as e:
-                    print(f"❌ Error adding child document {child.name}: {e}")
+                    print(f"❌ Error adding child document {child.title}: {e}")
                     continue
             
-            return f"✅ {root_item.type.value.title()} '{root_item.name}' added to docset '{docset_name}' with {child_count} child documents."
+            return f"✅ {root_item.content_type.value.title()} '{root_item.title}' added to docset '{docset_name}' with {child_count} child documents."
                 
         except Exception as e:
             print(f"❌ Error adding URL content: {e}")

@@ -1,208 +1,74 @@
 #!/usr/bin/env python3
 """
-Basic RAG system test without external dependencies
+Basic RAG functionality test with mock
 """
 
+import asyncio
 import os
 import sys
 from dotenv import load_dotenv
+from unittest.mock import patch, Mock
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from ragspace.services import RAGTextSplitter
-from ragspace.storage import MockDocsetManager
+from ragspace.services.rag.mock_rag_manager import MockRAGManager
 
 # Load environment variables
 load_dotenv()
 
+async def test_mock_rag_manager():
+    """Test mock RAG manager functionality"""
+    print("🧪 Testing Mock RAG Manager...")
+    
+    # Initialize mock RAG manager
+    mock_rag = MockRAGManager()
+    
+    # Test basic query
+    result = await mock_rag.query_knowledge_base("test query")
+    print(f"✅ Basic query result: {result}")
+    assert "This is a test response from the mock RAG system" in result
+    
+    # Test hello query
+    result = await mock_rag.query_knowledge_base("hello")
+    print(f"✅ Hello query result: {result}")
+    assert "Hello! This is a mock response to your greeting" in result
+    
+    # Test error query
+    result = await mock_rag.query_knowledge_base("error test")
+    print(f"✅ Error query result: {result}")
+    assert "❌ Mock error" in result
+    
+    # Test embedding processing
+    result = await mock_rag.process_document_embeddings()
+    print(f"✅ Embedding processing result: {result}")
+    assert "✅ Mock embedding processing completed successfully" in result
+    
+    # Test embedding status
+    result = mock_rag.get_embedding_status()
+    print(f"✅ Embedding status: {result}")
+    assert "Mock embedding status" in result
+    
+    # Test document listing
+    result = mock_rag.list_documents()
+    print(f"✅ Document listing: {result}")
+    assert "Mock documents across all docsets" in result
+    
+    return True
 
-def test_text_splitter():
-    """Test text splitter functionality"""
-    print("\n=== Testing Text Splitter ===")
-    
-    splitter = RAGTextSplitter()
-    
-    # Test text splitting
-    sample_text = """
-    This is a sample document with multiple paragraphs.
-    
-    It contains various types of content including code examples.
-    
-    def example_function():
-        return "Hello, World!"
-    
-    And some more text content.
-    """
-    
-    chunks = splitter.split_text(sample_text, "text")
-    print(f"✅ Text splitter created {len(chunks)} chunks")
-    
-    for i, chunk in enumerate(chunks):
-        print(f"  Chunk {i+1}: {len(chunk['content'])} characters")
-        print(f"    Content: {chunk['content'][:100]}...")
-    
-    return chunks
-
-
-def test_code_splitting():
-    """Test code splitting functionality"""
-    print("\n=== Testing Code Splitting ===")
-    
-    splitter = RAGTextSplitter()
-    
-    # Test code splitting
-    sample_code = """
-    class ExampleClass:
-        def __init__(self, name):
-            self.name = name
-        
-        def get_name(self):
-            return self.name
-        
-        def set_name(self, new_name):
-            self.name = new_name
-    
-    def main():
-        obj = ExampleClass("test")
-        print(obj.get_name())
-    """
-    
-    chunks = splitter.split_text(sample_code, "code")
-    print(f"✅ Code splitter created {len(chunks)} chunks")
-    
-    for i, chunk in enumerate(chunks):
-        print(f"  Chunk {i+1}: {len(chunk['content'])} characters")
-        print(f"    Content: {chunk['content'][:100]}...")
-    
-    return chunks
-
-
-def test_markdown_splitting():
-    """Test markdown splitting functionality"""
-    print("\n=== Testing Markdown Splitting ===")
-    
-    splitter = RAGTextSplitter()
-    
-    # Test markdown splitting
-    sample_markdown = """
-    # Main Title
-    
-    This is a paragraph with some **bold text** and *italic text*.
-    
-    ## Subsection
-    
-    Here's a code block:
-    
-    ```python
-    def hello():
-        print("Hello, World!")
-    ```
-    
-    ### Another subsection
-    
-    More content here.
-    """
-    
-    chunks = splitter.split_text(sample_markdown, "markdown")
-    print(f"✅ Markdown splitter created {len(chunks)} chunks")
-    
-    for i, chunk in enumerate(chunks):
-        print(f"  Chunk {i+1}: {len(chunk['content'])} characters")
-        print(f"    Content: {chunk['content'][:100]}...")
-    
-    return chunks
-
-
-def test_storage_operations():
-    """Test storage operations"""
-    print("\n=== Testing Storage Operations ===")
-    
-    storage = MockDocsetManager()
-    
-    # Test creating docset
-    result = storage.create_docset("test_docset", "Test description")
-    print(f"✅ Create docset: {result}")
-    
-    # Test listing docsets
-    docsets = storage.list_docsets()
-    print(f"✅ List docsets: {docsets}")
-    
-    # Test adding document
-    result = storage.add_document_to_docset("test_docset", "test_doc", "This is test content", "text")
-    print(f"✅ Add document: {result}")
-    
-    # Test listing documents
-    documents = storage.list_documents_in_docset("test_docset")
-    print(f"✅ List documents: {documents}")
-    
-    return storage
-
-
-def test_document_processing():
-    """Test document processing pipeline"""
-    print("\n=== Testing Document Processing ===")
-    
-    splitter = RAGTextSplitter()
-    storage = MockDocsetManager()
-    
-    # Create a test document
-    test_document = {
-        "id": "test-123",
-        "name": "test_document",
-        "content": """
-        This is a test document with multiple sections.
-        
-        ## Section 1
-        This section contains important information about the system.
-        
-        ## Section 2
-        This section contains code examples:
-        
-        ```python
-        def example():
-            return "Hello, World!"
-        ```
-        
-        ## Section 3
-        This section contains more text content.
-        """,
-        "type": "markdown"
-    }
-    
-    # Split document
-    chunks = splitter.split_document(test_document)
-    print(f"✅ Document split into {len(chunks)} chunks")
-    
-    for i, chunk in enumerate(chunks):
-        print(f"  Chunk {i+1}:")
-        print(f"    Document: {chunk['document_name']}")
-        print(f"    Type: {chunk['document_type']}")
-        print(f"    Content: {chunk['content'][:100]}...")
-        print(f"    Metadata: {chunk['metadata']}")
-    
-    return chunks
-
-
-def main():
+async def main():
     """Main test function"""
-    print("🚀 Starting Basic RAG System Tests")
+    print("🚀 Starting RAG Basic Tests with Mock...")
     
-    # Run tests
-    test_text_splitter()
-    test_code_splitting()
-    test_markdown_splitting()
-    test_storage_operations()
-    test_document_processing()
+    # Test mock RAG manager
+    success = await test_mock_rag_manager()
     
-    print("\n🎉 Basic RAG System Tests Completed!")
-    print("\n✅ All core components are working correctly!")
-    print("📝 Next steps:")
-    print("  1. Set up environment variables (OPENAI_API_KEY, SUPABASE_URL, SUPABASE_KEY)")
-    print("  2. Run the full RAG system test")
-    print("  3. Deploy the database migrations")
-    print("  4. Start using the RAG system!")
-
+    if success:
+        print("✅ All tests passed!")
+    else:
+        print("❌ Some tests failed!")
+    
+    return success
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

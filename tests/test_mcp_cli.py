@@ -49,16 +49,16 @@ class TestMCPCLI:
         tools = output["tools"]
         assert len(tools) == 2
         
-        # Check list_docset tool
-        list_tool = next((t for t in tools if t["name"] == "list_docset"), None)
+        # Check list_docsets tool
+        list_tool = next((t for t in tools if t["name"] == "list_docsets"), None)
         assert list_tool is not None
-        assert list_tool["description"] == "List all docsets"
+        assert list_tool["description"] == "List all docsets - MCP tool interface"
         assert "inputSchema" in list_tool
         
         # Check ask tool
         ask_tool = next((t for t in tools if t["name"] == "ask"), None)
         assert ask_tool is not None
-        assert ask_tool["description"] == "Query the knowledge base"
+        assert ask_tool["description"] == "Query the knowledge base using RAG - MCP tool interface"
         assert "inputSchema" in ask_tool
         assert "query" in ask_tool["inputSchema"]["properties"]
         assert "docset" in ask_tool["inputSchema"]["properties"]
@@ -69,7 +69,7 @@ class TestMCPCLI:
         # Setup test data
         docset_manager.create_docset("cli-test", "CLI test docset")
         
-        # Test list_docset call
+        # Test list_docsets call
         result = subprocess.run(
             [
                 "mcp-inspector",
@@ -77,7 +77,7 @@ class TestMCPCLI:
                 "--server", "ragspace",
                 "--cli",
                 "--method", "tools/call",
-                "--tool-name", "list_docset",
+                "--tool-name", "list_docsets",
                 "--params", "{}"
             ],
             capture_output=True,

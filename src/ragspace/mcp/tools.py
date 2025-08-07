@@ -1,5 +1,5 @@
 """
-MCP Tools for RAGSpace
+MCP Tools for RAGSpace - External Interface Only
 """
 
 import gradio as gr
@@ -9,12 +9,15 @@ def get_docset_manager():
     from src.ragspace.storage import docset_manager
     return docset_manager
 
-def list_docset():
-    """List all docsets"""
+def get_rag_manager():
+    """Get the RAG manager"""
+    from src.ragspace.services.rag import RAGManager
+    return RAGManager()
+
+def list_docsets():
+    """List all docsets - MCP tool interface"""
     try:
-        # Get the current docset manager
         docset_manager = get_docset_manager()
-        # Get the raw docsets dictionary
         docsets = docset_manager.get_docsets_dict()
         if not docsets:
             return "No docsets found."
@@ -31,28 +34,31 @@ def list_docset():
         return f"Error listing docsets: {str(e)}"
 
 def ask(query: str, docset: str = None):
-    """Query the knowledge base"""
+    """Query the knowledge base using RAG - MCP tool interface"""
     try:
         if not query.strip():
             return "Please provide a query."
         
-        # Get the current docset manager
-        docset_manager = get_docset_manager()
-        # Use the docset manager to query the knowledge base
-        response = docset_manager.query_knowledge_base(query, docset)
-        return response
+        # Use handlers for business logic
+        from src.ragspace.ui.handlers import process_rag_query_sync
+        result = process_rag_query_sync(query, docset)
+        return result
+        
     except Exception as e:
-        return f"Error processing query: {str(e)}" 
+        return f"Error processing query: {str(e)}"
     
 def expose_mcp_tools():
-    """Expose MCP tools"""
-    hidden_btn_list_docset = gr.Button("hidden", render=False)
-    hidden_btn_list_docset.click(
-        fn=list_docset,
+    """Expose MCP tools - External interface only"""
+    # List docsets tool
+    hidden_btn_list_docsets = gr.Button("hidden", render=False)
+    hidden_btn_list_docsets.click(
+        fn=list_docsets,
         inputs=[],
         outputs=gr.Textbox(label="DocSets", visible=False),
-        api_name="list_docset"
+        api_name="list_docsets"
     )
+    
+    # Ask tool
     hidden_btn_ask = gr.Button("hidden", render=False)
     hidden_btn_ask.click(
         fn=ask,

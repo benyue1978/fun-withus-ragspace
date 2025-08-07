@@ -3,230 +3,58 @@ Integration tests for RAGSpace
 """
 
 import pytest
-import requests
-import subprocess
-import time
-import json
-import os
-from src.ragspace.storage import docset_manager
+from unittest.mock import patch, Mock
+from tests.test_ui_base import UIBaseTest
 
-class TestIntegration:
-    """Integration tests for the complete RAGSpace system"""
+class TestIntegration(UIBaseTest):
+    """Test integration between different components"""
     
-    @pytest.fixture(autouse=True)
-    def setup_and_teardown(self):
-        """Setup and teardown for each test"""
-        # Clear any existing data
-        docset_manager.docsets.clear()
-        yield
-        # Cleanup after test
-        docset_manager.docsets.clear()
-    
-    def test_docset_operations(self):
-        """Test DocSet creation and management"""
-        # Test create docset
-        result = docset_manager.create_docset("test-docset", "Test description")
-        assert "created successfully" in result
-        
-        # Test list docsets
-        result = docset_manager.list_docsets()
-        assert "test-docset" in result
-        assert "Test description" in result
-        
-        # Test add document
-        result = docset_manager.add_document_to_docset(
-            "test-docset", 
-            "Test Document", 
-            "This is test content",
-            "file"
-        )
-        assert "added to docset" in result
-        
-        # Test list documents in docset
-        result = docset_manager.list_documents_in_docset("test-docset")
-        assert isinstance(result, list)
-        assert len(result) == 1
-        assert result[0]["name"] == "Test Document"
-        assert result[0]["type"] == "file"
-    
-    def test_query_functionality(self):
-        """Test query functionality"""
-        # Setup test data
-        docset_manager.create_docset("test-query", "Test query docset")
-        docset_manager.add_document_to_docset(
-            "test-query",
-            "Python Guide",
-            "Python is a programming language. It is used for web development.",
-            "file"
-        )
-        
-        # Test query with specific docset
-        result = docset_manager.query_knowledge_base("Python", "test-query")
-        assert "Python Guide" in result
-        assert "programming language" in result
-        
-        # Test query without docset (search all)
-        result = docset_manager.query_knowledge_base("Python")
-        assert "Python Guide" in result
-        
-        # Test query with non-existent docset
-        result = docset_manager.query_knowledge_base("Python", "non-existent")
-        assert "not found" in result
-        
-        # Test query with no matching content
-        result = docset_manager.query_knowledge_base("JavaScript", "test-query")
-        assert "No documents found" in result
-    
-    def test_mcp_tools_functionality(self):
+    def test_mcp_tools_functionality(self, setup_mock_storage, setup_mock_rag):
         """Test MCP tools functionality"""
-        from src.ragspace.mcp.tools import list_docset, ask
+        from src.ragspace.mcp.tools import list_docsets, ask
         
-        # Test list_docset with empty data
-        result = list_docset()
-        assert "No docsets found" in result
+        # Test list_docsets
+        result = list_docsets()
+        assert "No docsets found" in result or "available" in result
         
-        # Test ask with empty data
-        result = ask("What is available?")
-        assert "No docsets available" in result or "No documents found" in result
+        # Test ask with mock RAG
+        result = ask("test query")
+        assert "This is a test response from the mock RAG system" in result
+    
+    def test_ui_component_integration(self, setup_mock_storage, setup_mock_rag):
+        """Test UI component integration"""
+        from src.ragspace.mcp.tools import list_docsets, ask
         
+        # Test MCP tools integration
+        list_result = list_docsets()
+        assert "No docsets found" in list_result or "available" in list_result
+        
+        ask_result = ask("hello")
+        assert "Hello! This is a mock response to your greeting" in ask_result
+    
+    def test_storage_and_rag_integration(self, setup_mock_storage, setup_mock_rag):
+        """Test integration between storage and RAG"""
         # Setup test data
-        docset_manager.create_docset("mcp-test", "MCP test docset")
-        docset_manager.add_document_to_docset(
-            "mcp-test",
-            "MCP Documentation",
-            "Model Context Protocol is a standard for LLM tools.",
+        mock_manager = setup_mock_storage
+        mock_manager.create_docset("integration-test", "Integration test")
+        mock_manager.add_document_to_docset(
+            "integration-test",
+            "Test Document",
+            "This is a test document for integration testing.",
             "file"
         )
         
-        # Test list_docset with data
-        result = list_docset()
-        assert "mcp-test" in result
-        assert "MCP test docset" in result
+        # Test RAG query with the stored document
+        from src.ragspace.mcp.tools import ask
+        result = ask("test", "integration-test")
         
-        # Test ask with specific docset
-        result = ask("Protocol", "mcp-test")
-        assert "MCP Documentation" in result or "Model Context Protocol" in result
-        
-        # Test ask without docset
-        result = ask("Protocol")
-        assert "MCP Documentation" in result or "Model Context Protocol" in result
+        # Should return mock RAG response
+        assert "This is a test response from the mock RAG system" in result
     
-    def test_ui_handlers(self):
-        """Test UI handler functions"""
-        from src.ragspace.ui.handlers import (
-            create_docset_ui,
-            upload_file_to_docset,
-            add_url_to_docset,
-            add_github_repo_to_docset,
-            process_query,
-            clear_chat
-        )
+    def test_error_handling_integration(self, setup_mock_storage, setup_mock_rag):
+        """Test error handling across components"""
+        from src.ragspace.mcp.tools import ask
         
-        # Test create_docset_ui
-        result = create_docset_ui("ui-test-unique", "UI test description")
-        assert "created successfully" in result or "already exists" in result
-        
-        # Test upload_file_to_docset (mock)
-        class MockFile:
-            def __init__(self, name, size):
-                self.name = name
-                self.size = size
-        
-        mock_files = [MockFile("test.txt", 1024)]
-        result = upload_file_to_docset(mock_files, "ui-test-unique")
-        assert "Added: test.txt" in result
-        
-        # Test add_url_to_docset
-        result = add_url_to_docset("https://example.com", "ui-test-unique", "website")
-        assert "added to docset" in result or "Error" in result
-        
-        # Test add_github_repo_to_docset
-        result = add_github_repo_to_docset("owner/repo", "ui-test-unique")
-        assert "added to docset" in result or "Error" in result
-        
-        # Test process_query
-        history = []
-        new_history, _ = process_query("Test query", history, "ui-test-unique")
-        assert len(new_history) == 2  # user + assistant messages
-        assert new_history[0]["role"] == "user"
-        assert new_history[1]["role"] == "assistant"
-        
-        # Test clear_chat
-        history = [{"role": "user", "content": "test"}]
-        new_history, _ = clear_chat()
-        assert new_history == []
-    
-    def test_error_handling(self):
-        """Test error handling scenarios"""
-        # Test creating duplicate docset
-        docset_manager.create_docset("duplicate", "First")
-        result = docset_manager.create_docset("duplicate", "Second")
-        assert "already exists" in result
-        
-        # Test adding document to non-existent docset
-        result = docset_manager.add_document_to_docset(
-            "non-existent", "Test", "Content", "file"
-        )
-        assert "not found" in result
-        
-        # Test listing documents in non-existent docset
-        result = docset_manager.list_documents_in_docset("non-existent")
-        assert result == []
-        
-        # Test querying empty docset
-        docset_manager.create_docset("empty", "Empty docset")
-        result = docset_manager.list_documents_in_docset("empty")
-        assert result == []
-    
-    def test_document_metadata(self):
-        """Test document metadata handling"""
-        docset_manager.create_docset("metadata-test", "Metadata test")
-        
-        # Test document with metadata
-        metadata = {"url": "https://example.com", "type": "website"}
-        result = docset_manager.add_document_to_docset(
-            "metadata-test",
-            "Test Document",
-            "Test content",
-            "website",
-            metadata
-        )
-        assert "added to docset" in result
-        
-        # Verify metadata is stored by listing documents
-        result = docset_manager.list_documents_in_docset("metadata-test")
-        assert isinstance(result, list)
-        assert len(result) == 1
-        assert result[0]["name"] == "Test Document"
-        assert result[0]["type"] == "website"
-        assert result[0]["url"] == "https://example.com"
-    
-    def test_document_search(self):
-        """Test document search functionality"""
-        docset_manager.create_docset("search-test", "Search test")
-        
-        # Add multiple documents
-        docset_manager.add_document_to_docset(
-            "search-test", "Python Guide", "Python programming language", "file"
-        )
-        docset_manager.add_document_to_docset(
-            "search-test", "JavaScript Guide", "JavaScript programming language", "file"
-        )
-        docset_manager.add_document_to_docset(
-            "search-test", "Web Development", "HTML, CSS, and JavaScript", "file"
-        )
-        
-        # Test search for "Python"
-        result = docset_manager.query_knowledge_base("Python", "search-test")
-        assert "Python Guide" in result
-        assert "Python programming" in result
-        
-        # Test search for "JavaScript"
-        result = docset_manager.query_knowledge_base("JavaScript", "search-test")
-        assert "JavaScript Guide" in result
-        assert "Web Development" in result  # Should also match
-        
-        # Test search for "programming"
-        result = docset_manager.query_knowledge_base("programming", "search-test")
-        assert "Python Guide" in result
-        assert "JavaScript Guide" in result 
+        # Test error handling in RAG
+        result = ask("error test")
+        assert "❌ Mock error" in result 

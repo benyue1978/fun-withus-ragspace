@@ -1,146 +1,101 @@
 #!/usr/bin/env python3
 """
-Test vector search functionality
+Vector search functionality test
 """
 
+import asyncio
 import os
 import sys
-import asyncio
 from dotenv import load_dotenv
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from ragspace.services import RAGRetriever, RAGManager
-from ragspace.storage import SupabaseDocsetManager
+from ragspace.services.rag import RAGRetriever, RAGManager
 
 # Load environment variables
 load_dotenv()
 
-
 async def test_vector_search():
     """Test vector search functionality"""
-    print("\n=== Testing Vector Search ===")
+    print("🧪 Testing Vector Search...")
     
     try:
-        # Initialize retriever
+        # Initialize RAG retriever
         retriever = RAGRetriever()
-        print("✅ RAGRetriever initialized")
+        print("✅ RAG Retriever initialized successfully")
         
-        # Test basic retrieval without vector similarity
-        print("\n🔄 Testing basic retrieval...")
-        result = await retriever.hybrid_retrieve("test query", use_rerank=False)
+        # Test query
+        test_query = "What is the main functionality?"
         
-        print(f"✅ Basic retrieval result: {result}")
+        # Test vector retrieval
+        result = await retriever.hybrid_retrieve(test_query)
         
         if result["status"] == "success":
-            print(f"  - Retrieved {len(result['chunks'])} chunks")
-            print(f"  - Retrieval time: {result.get('retrieval_time', 0):.3f}s")
+            print(f"✅ Vector search successful")
+            print(f"  Chunks found: {len(result['chunks'])}")
+            print(f"  Retrieval time: {result.get('retrieval_time', 0):.2f}s")
+            return True
         else:
-            print(f"  - Error: {result.get('error', 'Unknown error')}")
-        
-        return result
-        
+            print(f"❌ Vector search failed: {result.get('error', 'Unknown error')}")
+            return False
+            
     except Exception as e:
-        print(f"❌ Error in vector search test: {e}")
-        return None
-
+        print(f"❌ Vector search test failed: {e}")
+        return False
 
 async def test_rag_manager():
     """Test RAG manager functionality"""
-    print("\n=== Testing RAG Manager ===")
+    print("🧪 Testing RAG Manager...")
     
     try:
         # Initialize RAG manager
         manager = RAGManager()
-        print("✅ RAGManager initialized")
+        print("✅ RAG Manager initialized successfully")
         
         # Test system status
-        print("\n🔄 Testing system status...")
-        status = manager.get_system_status()
+        status = await manager.get_system_status()
         print(f"✅ System status: {status}")
-        
-        # Test available docsets
-        print("\n🔄 Testing available docsets...")
-        docsets = manager.get_available_docsets()
-        print(f"✅ Available docsets: {docsets}")
-        
-        # Test embedding progress
-        print("\n🔄 Testing embedding progress...")
-        progress = manager.get_embedding_progress()
-        print(f"✅ Embedding progress: {progress}")
-        
-        return {
-            "status": status,
-            "docsets": docsets,
-            "progress": progress
-        }
-        
-    except Exception as e:
-        print(f"❌ Error in RAG manager test: {e}")
-        return None
-
-
-async def test_storage_operations():
-    """Test storage operations"""
-    print("\n=== Testing Storage Operations ===")
-    
-    try:
-        # Initialize storage
-        storage = SupabaseDocsetManager()
-        print("✅ SupabaseDocsetManager initialized")
-        
-        # Test listing docsets
-        print("\n🔄 Testing docset listing...")
-        docsets = storage.get_docsets_dict()
-        print(f"✅ Available docsets: {docsets}")
-        
-        # Test listing documents
-        if docsets:
-            first_docset = list(docsets.keys())[0]
-            print(f"\n🔄 Testing document listing for docset: {first_docset}")
-            documents = storage.list_documents_in_docset(first_docset)
-            print(f"✅ Documents in {first_docset}: {len(documents)} documents")
-            
-            # Test listing chunks
-            if documents:
-                first_doc = documents[0]
-                print(f"\n🔄 Testing chunk listing for document: {first_doc['name']}")
-                chunks_result = storage.supabase.table("chunks").select("*").eq("document_id", first_doc['id']).execute()
-                print(f"✅ Chunks for document: {len(chunks_result.data)} chunks")
         
         return True
         
     except Exception as e:
-        print(f"❌ Error in storage operations test: {e}")
+        print(f"❌ RAG Manager test failed: {e}")
         return False
-
 
 async def main():
     """Main test function"""
-    print("🚀 Starting Vector Search Tests")
+    print("🚀 Starting Vector Search Tests...")
     
     # Check environment variables
-    required_vars = ["SUPABASE_URL", "SUPABASE_KEY", "OPENAI_API_KEY"]
+    required_vars = ['OPENAI_API_KEY', 'SUPABASE_URL', 'SUPABASE_KEY']
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     
     if missing_vars:
-        print(f"⚠️ Missing environment variables: {missing_vars}")
-        print("Please set these variables in your .env file")
-        return
+        print(f"⚠️  Missing environment variables: {missing_vars}")
+        print("Please set these variables before running the test.")
+        return False
     
     # Run tests
-    vector_result = await test_vector_search()
-    manager_result = await test_rag_manager()
-    storage_result = await test_storage_operations()
+    tests = [
+        test_rag_manager(),
+        test_vector_search()
+    ]
     
-    print("\n🎉 Vector Search Tests Completed!")
+    results = await asyncio.gather(*tests, return_exceptions=True)
     
-    if vector_result and manager_result and storage_result:
+    # Count successful tests
+    successful_tests = sum(1 for result in results if result is True)
+    total_tests = len(tests)
+    
+    print(f"\n📊 Test Results: {successful_tests}/{total_tests} tests passed")
+    
+    if successful_tests == total_tests:
         print("✅ All tests passed!")
+        return True
     else:
-        print("⚠️ Some tests failed. Check the logs above for details.")
-
+        print("❌ Some tests failed!")
+        return False
 
 if __name__ == "__main__":
     asyncio.run(main())

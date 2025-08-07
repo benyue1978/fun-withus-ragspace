@@ -37,6 +37,18 @@ class UIBaseTest:
         
         yield mock_manager
     
+    @pytest.fixture(autouse=True)
+    def setup_mock_rag(self):
+        """Setup mock RAG manager for all UI tests"""
+        from src.ragspace.services.rag.mock_rag_manager import MockRAGManager
+        
+        # Create mock RAG manager
+        mock_rag_manager = MockRAGManager()
+        
+        # Patch the RAG manager in handlers
+        with patch('src.ragspace.ui.handlers.get_rag_manager', return_value=mock_rag_manager):
+            yield mock_rag_manager
+    
     def create_mock_gradio_app(self):
         """Create a mock Gradio app for testing"""
         with gr.Blocks() as demo:

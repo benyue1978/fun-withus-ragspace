@@ -4,6 +4,7 @@ Knowledge Management UI Component
 
 import gradio as gr
 import time
+import asyncio
 
 def get_docset_manager():
     """Get the current docset manager"""
@@ -14,11 +15,13 @@ from src.ragspace.ui.handlers import (
     create_docset_ui,
     upload_file_to_docset,
     add_url_to_docset,
-    add_github_repo_to_docset
+    add_github_repo_to_docset,
+    trigger_embedding_process,
+    get_embedding_status
 )
 
 def create_knowledge_management_tab():
-    """Create the knowledge management tab"""
+    """Create the knowledge management tab with RAG integration"""
     
     # Get initial docsets
     initial_docsets = get_docset_manager().get_docsets_dict()
@@ -48,12 +51,13 @@ def create_knowledge_management_tab():
                 doc.get('name', 'Unknown'),
                 doc.get('type', 'unknown'),
                 doc.get('url', 'N/A'),
-                doc.get('added_date', 'Unknown')
+                doc.get('added_date', 'Unknown'),
+                doc.get('embedding_status', 'pending')  # Add embedding status
             ])
         return doc_rows
     
     def create_docset_info_text(docset, documents, docset_name):
-        """Create detailed docset info text"""
+        """Create detailed docset info text with RAG status"""
         info_lines = [
             f"📁 DocSet: {docset_name}",
             f"📝 Description: {docset.get('description', 'No description')}",
@@ -65,15 +69,31 @@ def create_knowledge_management_tab():
         
         # Count document types
         type_counts = {}
+        embedding_status_counts = {"pending": 0, "processing": 0, "done": 0, "error": 0}
+        
         for doc in documents:
             doc_type = doc.get('type', 'unknown')
             type_counts[doc_type] = type_counts.get(doc_type, 0) + 1
+            
+            # Count embedding status
+            embedding_status = doc.get('embedding_status', 'pending')
+            embedding_status_counts[embedding_status] = embedding_status_counts.get(embedding_status, 0) + 1
         
         for doc_type, count in type_counts.items():
             info_lines.append(f"  • {doc_type}: {count}")
         
         if not documents:
             info_lines.append("  • No documents yet")
+        
+        # Add RAG status information
+        info_lines.extend([
+            "",
+            "🧠 RAG Status:",
+            f"  • ✅ Embedded: {embedding_status_counts.get('done', 0)}",
+            f"  • ⏳ Processing: {embedding_status_counts.get('processing', 0)}",
+            f"  • 🟡 Pending: {embedding_status_counts.get('pending', 0)}",
+            f"  • ❌ Error: {embedding_status_counts.get('error', 0)}"
+        ])
         
         return "\n".join(info_lines)
     
@@ -123,21 +143,11 @@ def create_knowledge_management_tab():
                 
                 docset_list = gr.Dropdown(
                     choices=initial_choices,
+                    value=initial_selected,  # Set initial value
                     label="📚 Available DocSets",
                     interactive=True,
                     elem_classes=["input-modern"]
                 )
-                
-
-                
-                # DocSet actions
-                with gr.Group():
-                    refresh_docs_button = gr.Button(
-                        "🔄 Refresh Documents", 
-                        variant="secondary", 
-                        size="lg",
-                        elem_classes=["button-secondary"]
-                    )
             
             # Right main content - Documents and Add content
             with gr.Column(scale=3, elem_classes=["main-content"]):
@@ -145,23 +155,55 @@ def create_knowledge_management_tab():
                 
                 # Selected DocSet info with modern card
                 with gr.Group(elem_classes=["card"]):
-                    gr.Markdown("### 📊 DocSet Overview")
+                    gr.Markdown("### �� DocSet Overview")
+                    
+                    # Initialize docset info with first docset if available
+                    initial_info = ""
+                    if initial_selected:
+                        docset, documents, error = get_docset_data(initial_selected)
+                        if not error and docset:
+                            initial_info = create_docset_info_text(docset, documents, initial_selected)
+                    
                     selected_docset_info = gr.Textbox(
                         type="text",
-                        lines=3,
+                        lines=5,
                         label="📋 Selected DocSet Info",
+                        value=initial_info,
                         interactive=False,
                         elem_classes=["input-modern"]
                     )
                 
-                # Documents list with modern styling
+                # Documents list with modern styling and embedding status
                 with gr.Group(elem_classes=["card"]):
                     gr.Markdown("### 📚 Documents List")
+                    
+                    with gr.Row():
+                        refresh_docs_button = gr.Button(
+                            "🔄 Refresh Documents",
+                            variant="primary",
+                            size="lg",
+                            elem_classes=["button-primary"]
+                        )
+                        trigger_embedding_button = gr.Button(
+                            "🧠 Trigger Embedding",
+                            variant="primary",
+                            size="lg",
+                            elem_classes=["button-primary"]
+                        )
+                    
+                    # Initialize documents list with first docset if available
+                    initial_documents = []
+                    if initial_selected:
+                        docset, documents, error = get_docset_data(initial_selected)
+                        if not error and isinstance(documents, list):
+                            initial_documents = convert_documents_to_dataframe(documents)
+                    
                     documents_list = gr.Dataframe(
-                        headers=["📄 Document Name", "📁 Type", "🔗 URL", "📅 Added Date"],
+                        headers=["📄 Document Name", "📁 Type", "🔗 URL", "📅 Added Date", "🧠 Embedding Status"],
+                        value=initial_documents,
                         row_count=(1, "dynamic"),
-                        col_count=(4, "fixed"),
-                        datatype=["str", "str", "str", "str"],
+                        col_count=(5, "fixed"),
+                        datatype=["str", "str", "str", "str", "str"],
                         type="pandas",
                         label="📋 Documents in Selected DocSet",
                         interactive=False
@@ -213,7 +255,12 @@ def create_knowledge_management_tab():
                                 filterable=True,
                                 label="Website Type"
                             )
-                            url_button = gr.Button("Add Website", variant="secondary", size="lg")
+                            url_button = gr.Button(
+                                "Add Website", 
+                                variant="primary", 
+                                size="lg",
+                                elem_classes=["button-primary"]
+                            )
                             url_output = gr.Textbox(
                                 type="text",
                                 lines=1,
@@ -235,14 +282,18 @@ def create_knowledge_management_tab():
                                 placeholder="owner/repository or https://github.com/owner/repo",
                                 label="GitHub Repository"
                             )
-                            github_branch = gr.Textbox(
+                            branch_input = gr.Textbox(
                                 type="text",
                                 lines=1,
-                                value="main",
-                                label="Branch (optional)",
-                                info="Leave as 'main' for most repositories"
+                                placeholder="main",
+                                label="Branch (optional)"
                             )
-                            github_button = gr.Button("Add Repository", variant="secondary", size="lg")
+                            github_button = gr.Button(
+                                "Add Repository", 
+                                variant="primary", 
+                                size="lg",
+                                elem_classes=["button-primary"]
+                            )
                             github_output = gr.Textbox(
                                 type="text",
                                 lines=3,
@@ -288,11 +339,11 @@ def create_knowledge_management_tab():
             if error:
                 print(f"  → Error: {error}")
                 return gr.Textbox(value=f"Error loading docset info: {error}")
+            
             if not docset:
                 print(f"  → Docset not found: {docset_name}")
                 return gr.Textbox(value=f"DocSet '{docset_name}' not found")
             
-            # Ensure documents is a list
             if not isinstance(documents, list):
                 print(f"  → Documents is not a list: {type(documents)}")
                 return gr.Textbox(value="Error: Invalid document data format")
@@ -301,11 +352,36 @@ def create_knowledge_management_tab():
             print(f"  → Generated info text: {len(info_text)} characters")
             return gr.Textbox(value=info_text)
         
-        def update_target_docsets(docset_name):
-            """Update Target DocSet textboxes when a docset is selected"""
+        def trigger_embedding_for_docset(docset_name):
+            """Trigger embedding process for the selected docset"""
             if not docset_name:
-                return gr.Textbox(value="Select a DocSet from the sidebar"), gr.Textbox(value="Select a DocSet from the sidebar"), gr.Textbox(value="Select a DocSet from the sidebar")
-            return gr.Textbox(value=docset_name), gr.Textbox(value=docset_name), gr.Textbox(value=docset_name)
+                return "❌ Please select a DocSet first"
+            
+            try:
+                # Get RAG manager and trigger embedding
+                from src.ragspace.services.rag.rag_manager import RAGManager
+                rag_manager = RAGManager()
+                
+                # Trigger embedding asynchronously
+                import asyncio
+                async def trigger_embedding():
+                    return await rag_manager.trigger_embedding_for_docset(docset_name)
+                
+                result = asyncio.run(trigger_embedding())
+                
+                if result.get("status") == "success":
+                    return f"✅ Embedding triggered for '{docset_name}': {result.get('message', 'Processing started')}"
+                else:
+                    return f"❌ Failed to trigger embedding: {result.get('message', 'Unknown error')}"
+                    
+            except Exception as e:
+                return f"❌ Error triggering embedding: {str(e)}"
+        
+        def update_target_docsets(docset_name):
+            """Update target docset dropdowns"""
+            if not docset_name:
+                return [gr.Dropdown(value=""), gr.Dropdown(value=""), gr.Dropdown(value="")]
+            return [gr.Dropdown(value=docset_name), gr.Dropdown(value=docset_name), gr.Dropdown(value=docset_name)]
         
         # Connect events
         # Auto-load docsets on page load by triggering the create button (which will update the list)
@@ -316,7 +392,28 @@ def create_knowledge_management_tab():
             api_name=False
         ).then(update_docset_lists, outputs=[
             docset_list
-        ], api_name=False)
+        ], api_name=False).then(
+            # Auto-select first docset after list update
+            lambda choices: choices[0] if choices else None,
+            docset_list,
+            docset_list,
+            api_name=False
+        ).then(
+            update_documents,
+            docset_list,
+            documents_list,
+            api_name=False
+        ).then(
+            update_docset_info,
+            docset_list,
+            selected_docset_info,
+            api_name=False
+        ).then(
+            update_target_docsets,
+            docset_list,
+            [upload_docset_name, url_docset_name, github_docset_name],
+            api_name=False
+        )
         
         # Separate event bindings for better debugging
         docset_list.change(
@@ -348,7 +445,12 @@ def create_knowledge_management_tab():
             api_name=False
         ).then(update_docset_lists, outputs=[
             docset_list
-        ], api_name=False)
+        ], api_name=False).then(
+            update_documents,
+            docset_list,
+            documents_list,
+            api_name=False
+        )
         
         # URL upload
         url_button.click(
@@ -358,22 +460,55 @@ def create_knowledge_management_tab():
             api_name=False
         ).then(update_docset_lists, outputs=[
             docset_list
-        ], api_name=False)
+        ], api_name=False).then(
+            update_documents,
+            docset_list,
+            documents_list,
+            api_name=False
+        )
         
         # GitHub upload
         github_button.click(
             add_github_repo_to_docset, 
-            [github_input, github_docset_name, github_branch], 
+            [github_input, github_docset_name, branch_input], 
             github_output,
             api_name=False
         ).then(update_docset_lists, outputs=[
             docset_list
-        ], api_name=False)
+        ], api_name=False).then(
+            update_documents,
+            docset_list,
+            documents_list,
+            api_name=False
+        )
         
         # Refresh documents
         refresh_docs_button.click(
             update_documents,
             docset_list,
             documents_list,
+            api_name=False
+        ).then(
+            update_docset_info,
+            docset_list,
+            selected_docset_info,
+            api_name=False
+        )
+        
+        # Trigger embedding - with complete update chain
+        trigger_embedding_button.click(
+            trigger_embedding_for_docset,
+            docset_list,
+            trigger_embedding_button,
+            api_name=False
+        ).then(
+            update_documents,
+            docset_list,
+            documents_list,
+            api_name=False
+        ).then(
+            update_docset_info,
+            docset_list,
+            selected_docset_info,
             api_name=False
         ) 

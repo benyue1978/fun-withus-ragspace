@@ -120,8 +120,8 @@ class MockCrawler(CrawlerInterface):
             
             # Create root item
             root_item = CrawledItem(
-                name=mock_data["name"],
-                type=mock_data["type"],
+                title=mock_data["name"],
+                content_type=mock_data["type"],
                 url=mock_data["url"],
                 content=mock_data["content"],
                 metadata={
@@ -135,8 +135,8 @@ class MockCrawler(CrawlerInterface):
             # Add children
             for child_data in mock_data.get("children", []):
                 child = CrawledItem(
-                    name=child_data["name"],
-                    type=child_data["type"],
+                    title=child_data["name"],
+                    content_type=child_data["type"],
                     url=child_data["url"],
                     content=child_data["content"],
                     metadata={
@@ -151,8 +151,7 @@ class MockCrawler(CrawlerInterface):
             return CrawlResult(
                 success=True,
                 message=f"Mock crawler: Successfully crawled {len(root_item.children)} items from {url}",
-                root_item=root_item,
-                items=root_item.children
+                items=[root_item] + root_item.children
             )
             
         except Exception as e:

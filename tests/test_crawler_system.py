@@ -1,14 +1,19 @@
 """
-Tests for the crawler system
+Test crawler system functionality
 """
 
 import pytest
-from unittest.mock import Mock, patch
-from src.ragspace.services.crawler_interface import (
-    CrawlerInterface, CrawlResult, CrawledItem, ContentType, CrawlerRegistry
+from unittest.mock import Mock, patch, AsyncMock
+
+from src.ragspace.services.crawler import (
+    CrawlerInterface,
+    CrawlResult,
+    CrawledItem,
+    ContentType,
+    CrawlerRegistry,
+    GitHubCrawler,
+    WebsiteCrawler
 )
-from src.ragspace.services.github_crawler import GitHubCrawler
-from src.ragspace.services.website_crawler import WebsiteCrawler
 
 
 class TestCrawlerInterface:
@@ -36,75 +41,79 @@ class TestCrawledItem:
     """Test CrawledItem dataclass"""
     
     def test_crawled_item_creation(self):
-        """Test creating a CrawledItem"""
+        """Test CrawledItem creation"""
         item = CrawledItem(
-            name="test.txt",
-            content="Test content",
-            type=ContentType.FILE,
-            url="https://example.com/test.txt",
-            metadata={"size": 100}
+            title="Test Document",
+            content="This is test content",
+            content_type=ContentType.DOCUMENTATION,
+            url="https://example.com",
+            metadata={"test": "data"}
         )
         
-        assert item.name == "test.txt"
-        assert item.content == "Test content"
-        assert item.type == ContentType.FILE
-        assert item.url == "https://example.com/test.txt"
-        assert item.metadata["size"] == 100
-        assert item.children is None
+        assert item.title == "Test Document"
+        assert item.content == "This is test content"
+        assert item.content_type == ContentType.DOCUMENTATION
+        assert item.url == "https://example.com"
+        assert item.metadata["test"] == "data"
     
     def test_crawled_item_with_children(self):
         """Test CrawledItem with children"""
         child = CrawledItem(
-            name="child.txt",
+            title="Child Document",
             content="Child content",
-            type=ContentType.FILE
+            content_type=ContentType.CODE,
+            url="https://example.com/child"
         )
         
         parent = CrawledItem(
-            name="parent",
+            title="Parent Document",
             content="Parent content",
-            type=ContentType.REPOSITORY,
+            content_type=ContentType.REPOSITORY,
             children=[child]
         )
         
+        assert parent.children is not None
         assert len(parent.children) == 1
-        assert parent.children[0].name == "child.txt"
+        assert parent.children[0].title == "Child Document"
 
 
 class TestCrawlResult:
     """Test CrawlResult dataclass"""
     
     def test_successful_crawl_result(self):
-        """Test successful CrawlResult"""
+        """Test successful CrawlResult creation"""
         item = CrawledItem(
-            name="test.txt",
+            title="Test Document",
             content="Test content",
-            type=ContentType.FILE
+            content_type=ContentType.DOCUMENTATION
         )
         
         result = CrawlResult(
             success=True,
             message="Successfully crawled",
-            root_item=item,
-            items=[item]
+            items=[item],
+            metadata={"crawled_count": 1}
         )
         
         assert result.success is True
         assert result.message == "Successfully crawled"
-        assert result.root_item == item
-        assert result.items == [item]
+        assert len(result.items) == 1
+        assert result.items[0].title == "Test Document"
+        assert result.metadata["crawled_count"] == 1
     
     def test_failed_crawl_result(self):
-        """Test failed CrawlResult"""
+        """Test failed CrawlResult creation"""
         result = CrawlResult(
             success=False,
-            message="Failed to crawl"
+            message="Failed to crawl",
+            items=[],
+            metadata={"error": "test error"}
         )
         
         assert result.success is False
         assert result.message == "Failed to crawl"
-        assert result.root_item is None
-        assert result.items is None
+        assert result.items == []
+        assert result.metadata["error"] == "test error"
 
 
 class TestCrawlerRegistry:
@@ -230,13 +239,15 @@ class TestGitHubCrawler:
         """Test content type determination"""
         crawler = GitHubCrawler()
         
-        assert crawler.determine_content_type("README.md") == ContentType.DOCUMENT
+        # Test different file types
+        assert crawler.determine_content_type("README.md") == ContentType.DOCUMENTATION
         assert crawler.determine_content_type("main.py") == ContentType.CODE
-        assert crawler.determine_content_type("config.json") == ContentType.CONFIG
-        assert crawler.determine_content_type("document.txt") == ContentType.DOCUMENT
-        assert crawler.determine_content_type("unknown.xyz") == ContentType.FILE
+        assert crawler.determine_content_type("config.json") == ContentType.CONFIGURATION
+        assert crawler.determine_content_type("data.csv") == ContentType.DATA
+        assert crawler.determine_content_type("image.png") == ContentType.IMAGE
+        assert crawler.determine_content_type("unknown.xyz") == ContentType.UNKNOWN
     
-    @patch('src.ragspace.services.github_crawler.requests.get')
+    @patch('src.ragspace.services.crawler.github_crawler.requests.get')
     def test_get_rate_limit_info(self, mock_get):
         """Test rate limit info retrieval"""
         crawler = GitHubCrawler()
@@ -248,17 +259,22 @@ class TestGitHubCrawler:
                 "core": {
                     "limit": 5000,
                     "remaining": 4999,
-                    "reset": 1234567890
+                    "reset": 1234567890,
+                    "used": 1
                 }
             }
         }
         mock_get.return_value = mock_response
         
         result = crawler.get_rate_limit_info()
-        assert "resources" in result
-        assert result["resources"]["core"]["limit"] == 5000
+        assert "limit" in result
+        assert "remaining" in result
+        assert "reset" in result
+        assert "used" in result
+        assert result["limit"] == 5000
+        assert result["remaining"] == 4999
     
-    @patch('src.ragspace.services.github_crawler.requests.get')
+    @patch('src.ragspace.services.crawler.github_crawler.requests.get')
     def test_get_rate_limit_info_error(self, mock_get):
         """Test rate limit info error handling"""
         crawler = GitHubCrawler()
@@ -267,8 +283,7 @@ class TestGitHubCrawler:
         mock_get.side_effect = Exception("Network error")
         
         result = crawler.get_rate_limit_info()
-        assert "error" in result
-        assert "Network error" in result["error"]
+        assert result == {}  # Should return empty dict on error
 
 
 class TestWebsiteCrawler:
@@ -304,24 +319,25 @@ class TestWebsiteCrawler:
         assert "https://" in patterns
     
     def test_should_skip_item(self):
-        """Test item skipping logic"""
+        """Test should_skip_item functionality"""
         crawler = WebsiteCrawler()
         
-        # Test large content
-        large_item = CrawledItem(
-            name="large.txt",
-            content="x" * 100000,  # 100KB
-            type=ContentType.DOCUMENT
-        )
-        assert crawler.should_skip_item(large_item)
-        
-        # Test normal content
+        # Test normal item (should not skip)
         normal_item = CrawledItem(
-            name="normal.txt",
+            title="normal.html",
             content="Normal content",
-            type=ContentType.DOCUMENT
+            content_type=ContentType.WEBSITE
         )
         assert not crawler.should_skip_item(normal_item)
+        
+        # Test large item (should skip) - create content larger than 50000 chars
+        large_content = "Large content " * 4000  # 15 * 4000 = 60000 chars
+        large_item = CrawledItem(
+            title="large.html",
+            content=large_content,
+            content_type=ContentType.WEBSITE
+        )
+        assert crawler.should_skip_item(large_item)
     
     def test_get_rate_limit_info(self):
         """Test rate limit info for website crawler"""

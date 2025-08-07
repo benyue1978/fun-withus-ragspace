@@ -1,16 +1,16 @@
 """
-RAG Manager for coordinating RAG system components
+RAG Manager - Main orchestrator for RAG operations
 """
 
 import asyncio
 import logging
-from typing import List, Dict, Optional, Any, AsyncGenerator
+from typing import Dict, List, Optional, Any, AsyncGenerator
 from datetime import datetime
 
 from .embedding_worker import EmbeddingWorker
 from .rag_retriever import RAGRetriever
 from .rag_response_generator import RAGResponseGenerator
-from ..storage.supabase_manager import SupabaseDocsetManager
+from ...storage.supabase_manager import SupabaseDocsetManager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

@@ -1,5 +1,5 @@
 """
-Embedding Worker for RAG document processing
+Embedding worker for processing document embeddings
 """
 
 import os
@@ -11,7 +11,7 @@ import openai
 from dotenv import load_dotenv
 
 from .text_splitter import RAGTextSplitter
-from ..storage.supabase_manager import SupabaseDocsetManager
+from ...storage.supabase_manager import SupabaseDocsetManager
 
 # Load environment variables
 load_dotenv()
@@ -220,12 +220,22 @@ class EmbeddingWorker:
             List of stored chunk data
         """
         try:
+            # Get docset name from the document's docset_id
+            docset_name = 'default'
+            if document.get('docset_id'):
+                try:
+                    docset_result = self.storage.supabase.table("docsets").select("name").eq("id", document['docset_id']).execute()
+                    if docset_result.data:
+                        docset_name = docset_result.data[0]['name']
+                except Exception as e:
+                    logger.warning(f"⚠️ Could not get docset name for docset_id {document['docset_id']}: {e}")
+            
             # Prepare chunks for storage
             chunks_data = []
             
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
                 chunk_data = {
-                    "docset_name": document.get('docset_name', 'default'),
+                    "docset_name": docset_name,
                     "document_name": document.get('name', 'Unknown'),
                     "document_id": document['id'],
                     "chunk_index": i,
@@ -235,15 +245,24 @@ class EmbeddingWorker:
                 }
                 chunks_data.append(chunk_data)
             
-            # Store chunks in database
-            result = self.storage.supabase.table("chunks").insert(chunks_data).execute()
+            # Log chunk data for debugging
+            chunk_indices = [chunk['chunk_index'] for chunk in chunks_data]
+            logger.info(f"📝 Preparing to insert {len(chunks_data)} chunks with indices: {chunk_indices}")
+            
+            # Use UPSERT operation to handle duplicates gracefully
+            # This will update existing chunks or insert new ones
+            result = self.storage.supabase.table("chunks").upsert(
+                chunks_data,
+                on_conflict="document_id,chunk_index"
+            ).execute()
             
             logger.info(f"✅ Stored {len(result.data)} chunks for document {document['id']}")
+            
             return result.data
             
         except Exception as e:
-            logger.error(f"❌ Error storing chunks: {e}")
-            raise
+            logger.error(f"❌ Error storing chunks for document {document.get('id', 'unknown')}: {e}")
+            return []
     
     def get_embedding_status_summary(self, docset_name: Optional[str] = None) -> Dict[str, int]:
         """

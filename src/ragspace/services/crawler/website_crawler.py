@@ -1,16 +1,16 @@
 """
-Website Crawler Implementation
-Implements the CrawlerInterface for general websites
+Website crawler implementation
 """
 
+import os
+import re
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlparse
-from typing import List, Dict, Optional, Any
+from typing import Dict, List, Optional, Any
+from urllib.parse import urlparse, urljoin
 import logging
-import re
 
-from ..config import CrawlerConfig
+from ...config.crawler_config import CrawlerConfig
 from .crawler_interface import (
     CrawlerInterface, CrawlResult, CrawledItem, ContentType
 )
@@ -200,8 +200,8 @@ class WebsiteCrawler(CrawlerInterface):
             
             # Create root item
             root_item = CrawledItem(
-                name=page_info["title"],
-                type=ContentType.WEBSITE,
+                title=page_info["title"],
+                content_type=ContentType.WEBSITE,
                 url=url,
                 content=page_info["content"],
                 metadata={
@@ -229,8 +229,8 @@ class WebsiteCrawler(CrawlerInterface):
                             content_type = self.determine_content_type(link, child_info["title"])
                             
                             child_item = CrawledItem(
-                                name=child_info["title"],
-                                type=content_type,
+                                title=child_info["title"],
+                                content_type=content_type,
                                 url=link,
                                 content=child_info["content"],
                                 metadata={
@@ -253,8 +253,7 @@ class WebsiteCrawler(CrawlerInterface):
             return CrawlResult(
                 success=True,
                 message=f"Successfully crawled {len(root_item.children) + 1} pages from {url}",
-                root_item=root_item,
-                total_items=len(root_item.children) + 1
+                items=[root_item] + root_item.children
             )
             
         except Exception as e:
@@ -272,9 +271,9 @@ class WebsiteCrawler(CrawlerInterface):
         if len(item.content) > self.config["max_content_size"]:
             return True
         
-        # Skip if name matches skip patterns
+        # Skip if title matches skip patterns
         for pattern in self.config.get("skip_patterns", []):
-            if pattern in item.name:
+            if pattern in item.title:
                 return True
         
         return False

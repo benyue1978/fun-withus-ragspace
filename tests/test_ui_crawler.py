@@ -1,12 +1,13 @@
 """
-UI Tests for Crawler Functionality
-Tests the crawler integration with the UI components
+Test UI crawler functionality
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import Mock, patch
+
+from src.ragspace.services.crawler import MockCrawler
 from src.ragspace.ui.components.knowledge_management import create_knowledge_management_tab
-from src.ragspace.services.mock_crawler import MockCrawler
+from src.ragspace.ui.handlers import add_github_repo_to_docset, add_url_to_docset
 from src.ragspace.storage.manager import MockDocsetManager
 
 
@@ -205,8 +206,8 @@ class TestCrawlerUI:
         """Test crawler UI error handling"""
         with patch('src.ragspace.services.crawler_registry') as mock_registry:
             # Mock crawler that fails
-            failing_crawler = MagicMock()
-            failing_crawler.crawl.return_value = MagicMock(
+            failing_crawler = Mock()
+            failing_crawler.crawl.return_value = Mock(
                 success=False,
                 message="Mock error: Failed to crawl"
             )

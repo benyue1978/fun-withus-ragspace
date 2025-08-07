@@ -1,47 +1,51 @@
 """
-Services package for RAGSpace
+Services Module
+
+This module contains all services for RAGSpace, organized by functionality.
 """
 
-from .github_service import GitHubService
+# Import crawler services
+from .crawler import (
+    CrawlerInterface,
+    CrawlResult,
+    CrawledItem, 
+    ContentType,
+    CrawlerRegistry,
+    crawler_registry,
+    GitHubCrawler,
+    WebsiteCrawler,
+    MockCrawler,
+    GitHubService,
+    register_default_crawlers
+)
 
-# Import crawler system components
-from .crawler_interface import CrawlerInterface, CrawlResult, CrawledItem, ContentType, CrawlerRegistry, crawler_registry
-from .github_crawler import GitHubCrawler
-from .website_crawler import WebsiteCrawler
-from .mock_crawler import MockCrawler
-
-# Import RAG system components
-from .text_splitter import RAGTextSplitter, ChunkConfig
-from .embedding_worker import EmbeddingWorker
-from .rag_retriever import RAGRetriever
-from .rag_response_generator import RAGResponseGenerator
-from .rag_manager import RAGManager
-
-# Register default crawlers
-# Note: Crawlers are registered lazily to ensure environment variables are loaded
-def register_default_crawlers():
-    """Register default crawlers with proper environment variable loading"""
-    if not crawler_registry.crawlers:  # Only register if not already registered
-        crawler_registry.register(GitHubCrawler())
-        crawler_registry.register(WebsiteCrawler())
+# Import RAG services
+from .rag import (
+    RAGManager,
+    RAGRetriever,
+    RAGResponseGenerator,
+    EmbeddingWorker,
+    RAGTextSplitter
+)
 
 __all__ = [
-    "GitHubService",
-    "CrawlerInterface",
-    "CrawlResult", 
-    "CrawledItem",
-    "ContentType",
-    "CrawlerRegistry",
-    "crawler_registry",
-    "GitHubCrawler",
-    "WebsiteCrawler",
-    "MockCrawler",
-    "register_default_crawlers",
-    # RAG Components
-    "RAGTextSplitter",
-    "ChunkConfig",
-    "EmbeddingWorker",
-    "RAGRetriever",
-    "RAGResponseGenerator",
-    "RAGManager"
+    # Crawler services
+    'CrawlerInterface',
+    'CrawlResult',
+    'CrawledItem',
+    'ContentType', 
+    'CrawlerRegistry',
+    'crawler_registry',
+    'GitHubCrawler',
+    'WebsiteCrawler',
+    'MockCrawler',
+    'GitHubService',
+    'register_default_crawlers',
+    
+    # RAG services
+    'RAGManager',
+    'RAGRetriever',
+    'RAGResponseGenerator',
+    'EmbeddingWorker',
+    'RAGTextSplitter'
 ] 

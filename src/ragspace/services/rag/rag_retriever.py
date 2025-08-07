@@ -1,16 +1,19 @@
 """
-RAG Retriever for vector similarity search and result reranking
+RAG Retriever - Vector similarity search and reranking
 """
 
-import os
+import asyncio
 import json
 import logging
-from typing import List, Dict, Optional, Any
+import os
+from typing import Dict, List, Optional, Any
+from datetime import datetime
 import openai
 from dotenv import load_dotenv
 import time
 
-from ..storage.supabase_manager import SupabaseDocsetManager
+from .text_splitter import RAGTextSplitter
+from ...storage.supabase_manager import SupabaseDocsetManager
 
 # Load environment variables
 load_dotenv()

@@ -3,64 +3,87 @@ Chat Interface UI Component
 """
 
 import gradio as gr
+import asyncio
 
 def get_docset_manager():
     """Get the current docset manager"""
     from src.ragspace.storage import docset_manager
     return docset_manager
 
-from src.ragspace.ui.handlers import process_query, clear_chat
+from src.ragspace.ui.handlers import (
+    process_query, 
+    clear_chat, 
+    trigger_embedding_process,
+    get_embedding_status,
+    get_rag_metadata
+)
 
 def create_chat_interface_tab():
     """Create the chat interface tab"""
-    
-    with gr.Tab("💬 Chat with Knowledge Base", id=1) as tab:
+    with gr.Tab("💬 Chat with Knowledge Base", id="chat_tab") as tab:
         with gr.Row():
-            # Chat sidebar
+            # Left sidebar - Chat settings
             with gr.Column(scale=1, elem_classes=["sidebar"]):
-                gr.Markdown("## 💬 Chat Settings")
+                gr.Markdown("## 💬 Chat Settings", elem_classes=["markdown-enhanced"])
                 
-                # DocSet selection for chat
-                # Get initial docset list
-                initial_docsets = get_docset_manager().get_docsets_dict()
-                initial_choices = list(initial_docsets.keys()) if initial_docsets else []
+                # DocSet selection for targeted queries
+                initial_choices = []
+                try:
+                    docsets = get_docset_manager().get_docsets_dict()
+                    initial_choices = list(docsets.keys()) if docsets else []
+                except Exception as e:
+                    print(f"Error loading docsets: {e}")
                 
                 chat_docset_dropdown = gr.Dropdown(
                     label="🔍 Search in Specific DocSet",
                     choices=initial_choices,
-                    interactive=True,
-                    info="Leave empty to search all docsets"
+                    interactive=True
                 )
                 
                 # Refresh docset list button
-                refresh_chat_docsets_button = gr.Button("🔄 Refresh DocSets", variant="secondary", size="sm")
+                refresh_chat_docsets_button = gr.Button(
+                    "🔄 Refresh DocSets", 
+                    variant="primary", 
+                    size="lg",
+                    elem_classes=["button-primary"]
+                )
                 
-                # Chat history management
-                with gr.Group():
-                    gr.Markdown("### 📝 Chat History")
-                    clear_chat_button = gr.Button("🗑️ Clear Chat")
+                clear_chat_button = gr.Button(
+                    "🗑️ Clear Chat",
+                    variant="primary",
+                    size="lg",
+                    elem_classes=["button-primary"]
+                )
             
             # Main chat area
             with gr.Column(scale=3, elem_classes=["main-content"]):
                 gr.Markdown("## 🤖 AI Assistant")
                 
-                # Chat interface
-                chatbot = gr.Chatbot(
-                    label="Chat History",
-                    height=500,
-                    show_label=True,
+                # Chat history with modern styling
+                chat_history = gr.Chatbot(
+                    value=[],
+                    height=400,
+                    label="💬 Chat History",
+                    elem_classes=["chat-modern"],
                     type="messages"
                 )
                 
-                # Input area
-                with gr.Row():
-                    msg = gr.Textbox(
-                        label="Ask a question about your knowledge base",
-                        placeholder="How do I implement authentication? What are the best practices for MCP integration?",
-                        scale=4,
-                        lines=2
-                    )
-                    send = gr.Button("Send", variant="primary", scale=1)
+                # Query input with modern styling
+                query_input = gr.Textbox(
+                    type="text",
+                    lines=2,
+                    placeholder="Ask a question about your documents...",
+                    label="💬 Your Question",
+                    elem_classes=["input-modern"]
+                )
+                
+                # Query button with modern styling
+                query_button = gr.Button(
+                    "Ask Question",
+                    variant="primary",
+                    size="lg",
+                    elem_classes=["button-primary"]
+                )
         
         # Connect chat interactions
         # Auto-update docset dropdown on page load
@@ -71,8 +94,22 @@ def create_chat_interface_tab():
             return gr.Dropdown(choices=choices)
         
         def process_chat_query(message, chat_history, docset_name):
-            """Process chat query with optional docset filtering"""
-            return process_query(message, chat_history, docset_name)
+            """Process chat query"""
+            if not message.strip():
+                return chat_history, ""
+            
+            try:
+                # Process the query
+                new_history, _ = process_query(message, chat_history, docset_name)
+                return new_history, ""
+                
+            except Exception as e:
+                error_response = f"❌ Error processing query: {str(e)}"
+                new_history = chat_history + [
+                    {"role": "user", "content": message},
+                    {"role": "assistant", "content": error_response}
+                ]
+                return new_history, ""
         
         # Refresh docset list button
         refresh_chat_docsets_button.click(
@@ -81,23 +118,26 @@ def create_chat_interface_tab():
             api_name=False
         )
         
-        send.click(
+        # Query button
+        query_button.click(
             process_chat_query, 
-            [msg, chatbot, chat_docset_dropdown], 
-            [chatbot, msg],
+            [query_input, chat_history, chat_docset_dropdown], 
+            [chat_history, query_input],
             api_name=False
         )
         
-        msg.submit(
+        # Enter key submission
+        query_input.submit(
             process_chat_query, 
-            [msg, chatbot, chat_docset_dropdown], 
-            [chatbot, msg],
+            [query_input, chat_history, chat_docset_dropdown], 
+            [chat_history, query_input],
             api_name=False
         )
         
+        # Clear chat button
         clear_chat_button.click(
             clear_chat, 
-            outputs=[chatbot, msg],
+            outputs=[chat_history, query_input],
             api_name=False
         )
     

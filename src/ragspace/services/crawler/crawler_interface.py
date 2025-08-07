@@ -13,19 +13,25 @@ class ContentType(Enum):
     """Content types for crawled items"""
     FILE = "file"
     DOCUMENT = "document"
+    DOCUMENTATION = "documentation"
     CODE = "code"
     CONFIG = "config"
+    CONFIGURATION = "configuration"
     README = "readme"
     WEBSITE = "website"
     REPOSITORY = "repository"
+    DATA = "data"
+    IMAGE = "image"
+    BINARY = "binary"
+    UNKNOWN = "unknown"
 
 
 @dataclass
 class CrawledItem:
     """Represents a crawled content item"""
-    name: str
+    title: str
     content: str
-    type: ContentType
+    content_type: ContentType
     url: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
     children: Optional[List['CrawledItem']] = None
@@ -36,8 +42,8 @@ class CrawlResult:
     """Result of a crawling operation"""
     success: bool
     message: str
-    root_item: Optional[CrawledItem] = None
     items: Optional[List[CrawledItem]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class CrawlerInterface(ABC):

@@ -40,6 +40,12 @@ CREATE POLICY "Allow public read access to chunks" ON chunks
 CREATE POLICY "Allow public insert access to chunks" ON chunks
   FOR INSERT WITH CHECK (true);
 
+CREATE POLICY "Allow public update access to chunks" ON chunks
+  FOR UPDATE USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow public delete access to chunks" ON chunks
+  FOR DELETE USING (true);
+
 -- Add embedding status columns to documents table
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS embedding_status text 
 DEFAULT 'pending' CHECK (embedding_status IN ('pending', 'processing', 'done', 'error'));

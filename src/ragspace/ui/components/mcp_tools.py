@@ -1,5 +1,5 @@
 """
-MCP Tools UI Component
+MCP Tools UI Component - UI Display Only
 """
 
 import gradio as gr
@@ -9,16 +9,8 @@ def get_docset_manager():
     from src.ragspace.storage import docset_manager
     return docset_manager
 
-from src.ragspace.mcp.tools import list_docset, ask
-
-# Import MCP tools locally to avoid circular imports
-def _get_mcp_tools():
-    """Get MCP tools without circular import"""
-    from src.ragspace.mcp.tools import list_docset, ask
-    return list_docset, ask
-
 def create_mcp_tools_tab():
-    """Create the MCP tools tab"""
+    """Create the MCP tools tab - UI display only"""
     
     with gr.Tab("🔧 MCP Tools", id=2) as tab:
         with gr.Row():
@@ -36,9 +28,9 @@ def create_mcp_tools_tab():
                 gr.Markdown("### 🛠️ Available Tools")
                 mcp_tools_list = gr.Textbox(
                     label="MCP Tools",
-                    value="• list_docset - List all docsets\n• ask - Query knowledge base",
+                    value="• list_docsets - List all docsets\n• ask - Query knowledge base using RAG",
                     interactive=False,
-                    lines=8
+                    lines=6
                 )
                 
                 # MCP Configuration
@@ -54,9 +46,14 @@ def create_mcp_tools_tab():
                 
                 # Test MCP tools
                 with gr.Group():
-                    gr.Markdown("### Test list_docset")
-                    test_list_docset_button = gr.Button("Test list_docset")
-                    test_list_docset_output = gr.Textbox(
+                    gr.Markdown("### Test list_docsets")
+                    test_list_docsets_button = gr.Button(
+                        "Test list_docsets",
+                        variant="primary",
+                        size="lg",
+                        elem_classes=["button-primary"]
+                    )
+                    test_list_docsets_output = gr.Textbox(
                         label="Result",
                         interactive=False,
                         lines=5
@@ -81,8 +78,19 @@ def create_mcp_tools_tab():
                     )
                     
                     # Refresh button for MCP docset list
-                    refresh_mcp_docsets_button = gr.Button("🔄 Refresh DocSets", variant="secondary", size="sm")
-                    test_ask_button = gr.Button("Test ask")
+                    refresh_mcp_docsets_button = gr.Button(
+                        "🔄 Refresh DocSets", 
+                        variant="primary", 
+                        size="lg",
+                        elem_classes=["button-primary"]
+                    )
+                    
+                    test_ask_button = gr.Button(
+                        "Test ask",
+                        variant="primary",
+                        size="lg",
+                        elem_classes=["button-primary"]
+                    )
                     test_ask_output = gr.Textbox(
                         label="Result",
                         interactive=False,
@@ -96,15 +104,16 @@ def create_mcp_tools_tab():
                 
                 1. Start the server: `make dev`
                 2. In another terminal: `mcp-inspector --config mcp_inspector_config.json --server ragspace --cli --method tools/list`
-                3. Test ask: `mcp-inspector --config mcp_inspector_config.json --server ragspace --cli --method tools/call --tool-name ask --params '{"query": "test", "docset": null}'`
+                3. Test list_docsets: `mcp-inspector --config mcp_inspector_config.json --server ragspace --cli --method tools/call --tool-name list_docsets --params '{}'`
+                4. Test ask: `mcp-inspector --config mcp_inspector_config.json --server ragspace --cli --method tools/call --tool-name ask --params '{"query": "test", "docset": null}'`
                 """)
         
-        # Connect MCP tool testing
-        def test_list_docset_tool():
-            """Test list_docset MCP tool"""
+        # Connect MCP tool testing - Use handlers for business logic
+        def test_list_docsets_tool():
+            """Test list_docsets MCP tool"""
             try:
-                list_docset_func, ask_func = _get_mcp_tools()
-                result = list_docset_func()
+                from src.ragspace.ui.handlers import list_documents
+                result = list_documents()
                 return gr.Textbox(value=str(result))
             except Exception as e:
                 return gr.Textbox(value=f"Error: {str(e)}")
@@ -112,8 +121,8 @@ def create_mcp_tools_tab():
         def test_ask_tool(query, docset):
             """Test ask MCP tool"""
             try:
-                list_docset_func, ask_func = _get_mcp_tools()
-                result = ask_func(query, docset if docset else None)
+                from src.ragspace.ui.handlers import process_rag_query_sync
+                result = process_rag_query_sync(query, docset if docset else None)
                 return gr.Textbox(value=str(result))
             except Exception as e:
                 return gr.Textbox(value=f"Error: {str(e)}")
@@ -131,9 +140,9 @@ def create_mcp_tools_tab():
             api_name=False
         )
         
-        test_list_docset_button.click(
-            test_list_docset_tool,
-            outputs=test_list_docset_output,
+        test_list_docsets_button.click(
+            test_list_docsets_tool,
+            outputs=test_list_docsets_output,
             api_name=False
         )
         
