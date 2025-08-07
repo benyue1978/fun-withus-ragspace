@@ -46,6 +46,7 @@ class StorageInterface(ABC):
 
 # Import implementations
 from .manager import MockDocsetManager
+from .supabase_manager import SupabaseDocsetManager
 
 # Default to Mock for now, will be switched to Supabase when needed
 docset_manager: StorageInterface = MockDocsetManager()
@@ -53,10 +54,18 @@ docset_manager: StorageInterface = MockDocsetManager()
 def use_supabase():
     """Switch to Supabase storage (for production)"""
     global docset_manager
-    from .supabase_manager import SupabaseDocsetManager
     docset_manager = SupabaseDocsetManager()
 
 def use_mock():
     """Switch to Mock storage (for testing)"""
     global docset_manager
-    docset_manager = MockDocsetManager() 
+    docset_manager = MockDocsetManager()
+
+__all__ = [
+    "StorageInterface",
+    "MockDocsetManager", 
+    "SupabaseDocsetManager",
+    "docset_manager",
+    "use_supabase",
+    "use_mock"
+] 

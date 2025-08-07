@@ -10,6 +10,13 @@ from .github_crawler import GitHubCrawler
 from .website_crawler import WebsiteCrawler
 from .mock_crawler import MockCrawler
 
+# Import RAG system components
+from .text_splitter import RAGTextSplitter, ChunkConfig
+from .embedding_worker import EmbeddingWorker
+from .rag_retriever import RAGRetriever
+from .rag_response_generator import RAGResponseGenerator
+from .rag_manager import RAGManager
+
 # Register default crawlers
 # Note: Crawlers are registered lazily to ensure environment variables are loaded
 def register_default_crawlers():
@@ -29,5 +36,12 @@ __all__ = [
     "GitHubCrawler",
     "WebsiteCrawler",
     "MockCrawler",
-    "register_default_crawlers"
+    "register_default_crawlers",
+    # RAG Components
+    "RAGTextSplitter",
+    "ChunkConfig",
+    "EmbeddingWorker",
+    "RAGRetriever",
+    "RAGResponseGenerator",
+    "RAGManager"
 ] 

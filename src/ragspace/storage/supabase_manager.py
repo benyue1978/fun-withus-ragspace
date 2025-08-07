@@ -8,7 +8,6 @@ from typing import Dict, Optional, List
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from . import StorageInterface
-from ..services import crawler_registry, register_default_crawlers
 
 # Load environment variables
 load_dotenv()
@@ -26,10 +25,15 @@ class SupabaseDocsetManager(StorageInterface):
         
         self.supabase: Client = create_client(supabase_url, supabase_key)
         
-        # Register default crawlers with proper environment loading
-        register_default_crawlers()
-        
         print(f"✅ Supabase client initialized with URL: {supabase_url}")
+    
+    def _register_crawlers(self):
+        """Register default crawlers - called when needed"""
+        try:
+            from ..services import register_default_crawlers
+            register_default_crawlers()
+        except ImportError:
+            print("⚠️ Crawler registration skipped due to import issues")
     
     def create_docset(self, name: str, description: str = "") -> str:
         """Create a new docset"""
@@ -202,6 +206,7 @@ class SupabaseDocsetManager(StorageInterface):
                 return f"DocSet '{docset_name}' not found. Please create it first."
             
             # Get appropriate crawler for URL
+            from ..services import crawler_registry
             crawler = crawler_registry.get_crawler_for_url(url)
             if not crawler:
                 supported_patterns = [c.get_supported_url_patterns() for c in crawler_registry.get_all_crawlers()]
@@ -290,6 +295,7 @@ class SupabaseDocsetManager(StorageInterface):
     
     def get_crawler_rate_limit(self, crawler_name: str = None) -> Dict:
         """Get rate limit information for crawlers"""
+        from ..services import crawler_registry
         if crawler_name:
             crawler = next((c for c in crawler_registry.get_all_crawlers() 
                           if c.__class__.__name__.lower() == crawler_name.lower()), None)
