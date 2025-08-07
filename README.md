@@ -1,8 +1,40 @@
 # RAGSpace - AI Knowledge Hub
 
+[English](README.md) | [中文](README_zh.md)
+
 🤖 Build and query your personal knowledge base with AI assistance.
 
-## Features
+## 🚀 Quick Start
+
+### Prerequisites
+
+1. **Supabase Project**: Create a new project at [supabase.com](https://supabase.com)
+2. **Environment Setup**: Copy and configure environment variables
+
+### Local Setup
+
+1. **Clone and install**
+   ```bash
+   git clone https://github.com/your-username/ragspace.git
+   cd ragspace
+   pip install -r requirements.txt
+   ```
+
+2. **Configure environment**
+   ```bash
+   cp env.example .env
+   # Edit .env with your Supabase credentials
+   ```
+
+3. **Run the application**
+   ```bash
+   python app.py
+   ```
+
+4. **Open in browser**
+   Navigate to `http://localhost:8000`
+
+## ✨ Features
 
 - **📚 Knowledge Base Management**: Upload files, add websites, and import GitHub repositories
 - **🕷️ Web Crawling System**: Automatic content extraction from URLs and GitHub repositories
@@ -13,333 +45,98 @@
 - **⚙️ Configurable Crawlers**: Environment-based configuration for all crawlers
 - **🚀 Easy Deployment**: One-click deployment to Render, Railway, or Hugging Face Spaces
 
-## Project Structure
+## 🎯 Use Cases
 
-```
-fun-withus-ragspace/
-├── src/
-│   └── ragspace/
-│       ├── __init__.py
-│       ├── config/                    # Configuration management
-│       │   ├── __init__.py
-│       │   └── crawler_config.py      # Crawler configuration system
-│       ├── models/
-│       │   ├── __init__.py
-│       │   ├── document.py            # Document model
-│       │   └── docset.py              # DocSet model
-│       ├── services/                   # Crawler services
-│       │   ├── __init__.py
-│       │   ├── crawler_interface.py   # Abstract crawler interface
-│       │   ├── github_crawler.py      # GitHub repository crawler
-│       │   ├── website_crawler.py     # General website crawler
-│       │   └── mock_crawler.py        # Mock crawler for testing
-│       ├── storage/
-│       │   ├── __init__.py
-│       │   ├── manager.py             # Memory-based DocSetManager
-│       │   └── supabase_manager.py    # Supabase-based DocSetManager
-│       ├── ui/
-│       │   ├── __init__.py
-│       │   ├── handlers.py            # UI event handlers
-│       │   └── components/            # UI components
-│       │       ├── __init__.py
-│       │       ├── knowledge_management.py
-│       │       ├── chat_interface.py
-│       │       └── mcp_tools.py
-│       └── mcp/
-│           ├── __init__.py
-│           └── tools.py               # MCP tool definitions
-├── app.py              # Main application entry point
-├── dev.py              # Development server with auto-reload
-├── pyproject.toml      # Poetry project configuration
-├── Makefile            # Simple command aliases
-├── Dockerfile         # Docker configuration
-├── supabase/          # Supabase CLI configuration
-│   ├── config.toml    # Supabase configuration
-│   ├── migrations/    # Database migrations
-│   ├── seed/          # Seed data
-│   └── functions/     # Edge Functions (future)
-├── scripts/           # Utility scripts
-├── tests/             # Test files
-├── env.example        # Environment variables template
-└── README.md          # This file
-```
+### Personal Knowledge Management
+- **Research Papers**: Upload and query academic papers
+- **Project Documentation**: Build knowledge bases for your projects
+- **Learning Notes**: Organize study materials and notes
+- **Technical Documentation**: Store and search technical guides
 
-## Data Structure
+### Team Collaboration
+- **Shared Knowledge Base**: Create team documentation hubs
+- **Code Documentation**: Import GitHub repositories for code search
+- **Process Documentation**: Store and query team procedures
+- **Meeting Notes**: Organize and search meeting records
 
-### Database Schema
+### Community Knowledge Sharing
+- **Open Source Projects**: Create documentation hubs for your projects
+- **Technical Communities**: Share knowledge with the community
+- **Educational Content**: Build learning resource collections
+- **Niche Technology**: Document rare or specialized technologies
 
-#### 1. DocSets Table
-```sql
-CREATE TABLE docsets (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text UNIQUE NOT NULL,
-  description text,
-  created_at timestamp DEFAULT now()
-);
-```
+## 📖 How to Use
 
-#### 2. Documents Table (with Parent-Child Support)
-```sql
-CREATE TABLE documents (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  docset_id uuid REFERENCES docsets(id) ON DELETE CASCADE,
-  parent_id uuid REFERENCES documents(id) ON DELETE CASCADE,
-  name text NOT NULL,
-  type text CHECK (type IN ('file', 'url', 'github', 'website', 'github_file', 'github_readme', 'github_repo', 'repository', 'document', 'code', 'config', 'readme')),
-  url text,
-  content text,
-  metadata jsonb DEFAULT '{}',
-  added_date timestamp DEFAULT now()
-);
-```
+### 1. Create a DocSet
+1. Go to the "📚 Knowledge Management" tab
+2. Enter a name and description for your knowledge base
+3. Click "Create DocSet"
 
-### Crawler System
+### 2. Add Content
+You can add content in three ways:
 
-The system includes a flexible crawler architecture with the following components:
+#### File Upload
+1. Select your DocSet from the sidebar
+2. Go to "📁 Add Files" tab
+3. Upload PDF, TXT, MD, or other text files
+4. Files will be automatically processed and embedded
 
-#### 1. Crawler Interface
-```python
-class CrawlerInterface:
-    def crawl(self, url: str, **kwargs) -> CrawlResult
-    def can_handle(self, url: str) -> bool
-    def get_supported_url_patterns(self) -> List[str]
-    def get_rate_limit_info(self) -> Dict[str, Any]
-```
+#### Website Content
+1. Select your DocSet from the sidebar
+2. Go to "🌐 Add URL" tab
+3. Enter a website URL
+4. Choose content type (website, documentation, etc.)
+5. Click "Add URL"
 
-#### 2. Available Crawlers
-- **GitHubCrawler**: Fetches repository contents and individual files
-- **WebsiteCrawler**: Extracts content from general websites
-- **MockCrawler**: Provides test data for development
+#### GitHub Repository
+1. Select your DocSet from the sidebar
+2. Go to "🐙 Add GitHub Repo" tab
+3. Enter repository URL (e.g., `owner/repo` or `https://github.com/owner/repo`)
+4. Optionally specify a branch
+5. Click "Add Repository"
 
-#### 3. Crawler Registry
-```python
-class CrawlerRegistry:
-    def register(self, crawler: CrawlerInterface)
-    def get_crawler_for_url(self, url: str) -> Optional[CrawlerInterface]
-    def get_all_crawlers(self) -> List[CrawlerInterface]
-```
+### 3. Query Your Knowledge Base
+1. Go to the "💬 Chat Interface" tab
+2. Select your DocSet from the dropdown
+3. Ask questions in natural language
+4. Get AI-powered responses with source citations
 
-### Configuration System
+### 4. Use with MCP Clients
+Connect with Cursor, Claude Desktop, or other LLM clients:
 
-All crawler settings are managed through environment variables:
-
-#### GitHub Crawler Configuration
-```bash
-GITHUB_TOKEN=your-github-token
-GITHUB_API_URL=https://api.github.com
-GITHUB_USER_AGENT=RAGSpace/1.0
-GITHUB_FILE_TYPES=.md,.py,.js,.ts,.txt,.rst,.adoc,.json,.yaml,.yml
-GITHUB_MAX_FILE_SIZE=50000
-GITHUB_SKIP_PATTERNS=node_modules,.git,__pycache__,.DS_Store,*.pyc
-GITHUB_MAX_DEPTH=10
-GITHUB_RATE_LIMIT_WARNING=true
-```
-
-#### Website Crawler Configuration
-```bash
-WEBSITE_MAX_DEPTH=3
-WEBSITE_MAX_PAGES=10
-WEBSITE_SKIP_PATTERNS=#,javascript:,mailto:,tel:,data:
-WEBSITE_CONTENT_SELECTORS=main,article,.content,#content,.post,.entry
-WEBSITE_TITLE_SELECTORS=h1,title,.title,.headline
-WEBSITE_USER_AGENT=RAGSpace/1.0
-WEBSITE_TIMEOUT=10
-WEBSITE_MAX_CONTENT_SIZE=50000
-```
-
-## API Endpoints
-
-### Web Interface APIs
-
-#### Knowledge Management
-- `create_docset_ui(name, description)` - Create new document collection
-- `upload_file_to_docset(files, docset_name)` - Upload files to collection
-- `add_url_to_docset(url, docset_name)` - Add website content
-- `add_github_repo_to_docset(repo_url, docset_name)` - Add GitHub repository
-
-#### Chat Interface
-- `process_query(query, history, docset_name)` - Process AI queries
-- `clear_chat()` - Clear chat history
-
-### MCP Tools
-
-#### Core Tools
-- `list_docset()` - List all document collections
-- `ask(query, docset)` - Query knowledge base
-
-#### Storage Management
-- `create_docset(name, description)` - Create document collection
-- `add_document_to_docset(docset_name, title, content, doc_type, metadata)` - Add document
-- `list_documents_in_docset(docset_name)` - List documents in collection
-- `query_knowledge_base(query, docset_name)` - Query specific collection
-
-### Crawler APIs
-
-#### GitHub Crawler
-- `crawl(url)` - Crawl GitHub repository
-- `get_rate_limit_info()` - Get API rate limit status
-- `get_repo_files(owner, repo, branch)` - Get repository file list
-
-#### Website Crawler
-- `crawl(url)` - Crawl website content
-- `extract_text_content(soup)` - Extract text from HTML
-- `find_links(soup, base_url)` - Find links on page
-
-## Quick Start
-
-### Prerequisites
-
-1. **Supabase Project**: Create a new project at [supabase.com](https://supabase.com)
-2. **Supabase CLI**: Install Supabase CLI for local development
-   ```bash
-   # macOS
-   brew install supabase/tap/supabase
-   
-   # Windows
-   choco install supabase
-   
-   # Linux
-   curl -fsSL https://supabase.com/install.sh | sh
+#### Cursor Integration
+1. Open Cursor Settings → MCP Servers
+2. Add server configuration:
+   ```json
+   {
+     "name": "RAGSpace",
+     "description": "Query your knowledge base",
+     "sse_url": "https://your-app.onrender.com/gradio_api/mcp"
+   }
    ```
 
-### Local Development
+#### Claude Desktop Integration
+1. Open Claude Desktop Settings → MCP Servers
+2. Add the same configuration as above
 
-#### Using Poetry (Recommended)
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-username/ragspace.git
-   cd ragspace
-   ```
-
-2. **Install Poetry (if not already installed)**
-   ```bash
-   curl -sSL https://install.python-poetry.org | python3 -
-   ```
-
-3. **Install dependencies**
-   ```bash
-   poetry install
-   ```
-
-4. **Setup Supabase CLI**
-   ```bash
-   # Run the setup script
-   ./scripts/supabase_setup.sh
-   
-   # Or manually:
-   supabase init
-   supabase login
-   supabase link --project-ref your-project-ref
-   ```
-
-5. **Apply database migrations**
-   ```bash
-   # Apply migrations to remote database
-   supabase db push
-   
-   # Or apply to local database for testing
-   supabase db reset
-   ```
-
-6. **Configure environment variables**
-   ```bash
-   cp env.example .env
-   # Edit .env with your Supabase credentials and crawler settings
-   ```
-
-7. **Test the application**
-   ```bash
-   # Run crawler tests
-   poetry run pytest tests/test_crawler_config.py -v
-   
-   # Run integration tests
-   poetry run pytest tests/test_ui_crawler.py -v
-   ```
-
-8. **Run the application**
-   ```bash
-   poetry run python app.py
-   # Or activate the environment first:
-   poetry shell
-   python app.py
-   ```
-
-9. **Open in browser**
-   Navigate to `http://localhost:8000`
-
-#### Using pip (Alternative)
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-username/ragspace.git
-   cd ragspace
-   ```
-
-2. **Set up virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Run the application**
-   ```bash
-   python app.py
-   ```
-
-5. **Open in browser**
-   Navigate to `http://localhost:8000`
-
-### Deployment
-
-#### Render (Recommended)
-
-1. **Fork this repository**
-2. **Connect to Render**
-   - Go to [Render Dashboard](https://dashboard.render.com)
-   - Click "New Web Service"
-   - Connect your GitHub repository
-   - Select the repository and branch
-
-3. **Configure the service**
-   - **Name**: `ragspace`
-   - **Environment**: `Python`
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `python app.py`
-
-4. **Set environment variables**
-   - Add all required environment variables from `env.example`
-
-5. **Deploy**
-   - Click "Create Web Service"
-   - Wait for deployment to complete
-
-#### Other Platforms
-
-- **Railway**: Use the `railway.json` configuration
-- **Hugging Face Spaces**: Use the Spaces configuration
-- **Docker**: Use the provided `Dockerfile`
-
-## MCP Integration
+## 🔧 MCP Integration
 
 RAGSpace includes a built-in MCP (Model Context Protocol) server that allows LLM clients to access your knowledge base.
 
-### Testing MCP Server with mcp-inspector
+### Available MCP Tools
 
-You can test the MCP server using the official MCP Inspector tool in command-line mode:
+**Core Tools:**
+- `list_docset` - List all document collections
+- `ask` - Query your knowledge base with natural language
+
+### Testing MCP Server
 
 1. **Install mcp-remote**
    ```bash
    npm install -g mcp-remote
    ```
 
-2. **Create mcp-inspector configuration**
-   Create a file named `mcp_inspector_config.json`:
+2. **Create configuration file** `mcp_inspector_config.json`:
    ```json
    {
      "mcpServers": {
@@ -352,80 +149,195 @@ You can test the MCP server using the official MCP Inspector tool in command-lin
    }
    ```
 
-3. **List available tools**
+3. **Test the connection**
    ```bash
+   # List available tools
    mcp-inspector --config mcp_inspector_config.json --server ragspace --cli --method tools/list
-   ```
-
-4. **Call a tool**
-   ```bash
-   # List all docsets
-   mcp-inspector --config mcp_inspector_config.json --server ragspace --cli --method tools/call --tool-name list_docset --params '{}'
    
    # Ask a question
    mcp-inspector --config mcp_inspector_config.json --server ragspace --cli --method tools/call --tool-name ask --params '{"query": "What is available?", "docset": null}'
-   
-   # Create a docset
-   mcp-inspector --config mcp_inspector_config.json --server ragspace --cli --method tools/call --tool-name create_docset_ui --params '{"name": "gradio mcp", "description": "Gradio MCP integration"}'
    ```
 
-### Available MCP Tools
+## 🚀 Deployment
 
-The following tools are available through the MCP server:
+### Render (Recommended)
 
-**Core DocSet Tools:**
-- `list_docset` - List all docsets
-- `ask` - Ask a question (with optional docset parameter)
+1. **Fork this repository**
+2. **Connect to Render**
+   - Go to [Render Dashboard](https://dashboard.render.com)
+   - Click "New Web Service"
+   - Connect your GitHub repository
 
-> **Note**: Only the core DocSet tools are exposed to MCP clients. UI management tools are hidden from MCP to keep the interface clean and focused.
+3. **Configure the service**
+   - **Name**: `ragspace`
+   - **Environment**: `Python`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `python app.py`
 
-### Testing Steps
+4. **Set environment variables**
+   - Add all required environment variables from `env.example`
 
-1. **Start the Gradio server**
+5. **Deploy**
+   - Click "Create Web Service"
+
+### Other Platforms
+
+- **Railway**: Use the `railway.json` configuration
+- **Hugging Face Spaces**: Use the Spaces configuration
+- **Docker**: Use the provided `Dockerfile`
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+#### Required Variables
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SUPABASE_URL` | Supabase project URL | (required) |
+| `SUPABASE_KEY` | Supabase API key | (required) |
+| `PORT` | Server port | `8000` |
+| `DEBUG` | Debug mode | `false` |
+
+#### GitHub Crawler Configuration
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GITHUB_TOKEN` | GitHub API token | (optional) |
+| `GITHUB_FILE_TYPES` | Supported file types | `.md,.py,.js,.ts,.txt,.rst,.adoc,.json,.yaml,.yml` |
+| `GITHUB_MAX_FILE_SIZE` | Maximum file size (bytes) | `50000` |
+| `GITHUB_MAX_DEPTH` | Maximum directory depth | `10` |
+
+#### Website Crawler Configuration
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `WEBSITE_MAX_DEPTH` | Maximum crawl depth | `3` |
+| `WEBSITE_MAX_PAGES` | Maximum pages to crawl | `10` |
+| `WEBSITE_TIMEOUT` | Request timeout (seconds) | `10` |
+
+## 🏗️ Development
+
+### Project Structure
+
+```
+fun-withus-ragspace/
+├── src/
+│   └── ragspace/
+│       ├── config/                    # Configuration management
+│       ├── models/                    # Data models
+│       ├── services/                  # Crawler services
+│       ├── storage/                   # Database management
+│       ├── ui/                        # UI components
+│       └── mcp/                       # MCP server
+├── app.py              # Main application entry point
+├── tests/              # Test files
+└── supabase/           # Database migrations
+```
+
+### Development Setup
+
+#### Using Poetry (Recommended)
+
+1. **Install Poetry**
    ```bash
-   # Using Poetry
+   curl -sSL https://install.python-poetry.org | python3 -
+   ```
+
+2. **Install dependencies**
+   ```bash
+   poetry install
+   ```
+
+3. **Setup Supabase CLI**
+   ```bash
+   ./scripts/supabase_setup.sh
+   ```
+
+4. **Apply database migrations**
+   ```bash
+   supabase db push
+   ```
+
+5. **Run the application**
+   ```bash
    poetry run python app.py
-   
-   # Using pip
-   source venv/bin/activate
+   ```
+
+#### Using pip
+
+1. **Set up virtual environment**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Run the application**
+   ```bash
    python app.py
    ```
 
-2. **Verify server is running**
-   ```bash
-   curl -s http://localhost:8000/ | head -5
-   ```
+### Testing
 
-3. **Test MCP connection**
-   ```bash
-   mcp-inspector --config mcp_inspector_config.json --server ragspace --cli --method tools/list
-   ```
+```bash
+# Run all tests
+pytest
 
-4. **Test tool execution**
-   ```bash
-   mcp-inspector --config mcp_inspector_config.json --server ragspace --cli --method tools/call --tool-name list_docset --params '{}'
-   ```
+# Run specific test categories
+pytest tests/test_crawler_system.py
+pytest tests/test_ui_integration.py
+```
 
-### Connecting with Cursor
+## 📊 Data Structure
 
-1. **Open Cursor**
-2. **Go to Settings** → **MCP Servers**
-3. **Add new server**:
-   ```json
-   {
-     "name": "RAGSpace",
-     "description": "Query your knowledge base",
-     "sse_url": "https://your-app.onrender.com/gradio_api/mcp/sse"
-   }
-   ```
+### Database Schema
 
-### Connecting with Claude Desktop
+#### DocSets Table
+```sql
+CREATE TABLE docsets (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text UNIQUE NOT NULL,
+  description text,
+  created_at timestamp DEFAULT now()
+);
+```
 
-1. **Open Claude Desktop**
-2. **Go to Settings** → **MCP Servers**
-3. **Add the same configuration as above**
+#### Documents Table
+```sql
+CREATE TABLE documents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  docset_id uuid REFERENCES docsets(id) ON DELETE CASCADE,
+  parent_id uuid REFERENCES documents(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  type text CHECK (type IN ('file', 'url', 'github', 'website', 'github_file', 'github_readme', 'github_repo', 'repository', 'document', 'code', 'config', 'readme', 'documentation', 'configuration', 'data', 'image', 'binary', 'unknown')),
+  url text,
+  content text,
+  metadata jsonb DEFAULT '{}',
+  added_date timestamp DEFAULT now()
+);
+```
 
-## Development Phases
+### Crawler System
+
+The system includes a flexible crawler architecture:
+
+#### Available Crawlers
+- **GitHubCrawler**: Fetches repository contents and individual files
+- **WebsiteCrawler**: Extracts content from general websites
+- **MockCrawler**: Provides test data for development
+
+#### Crawler Interface
+```python
+class CrawlerInterface:
+    def crawl(self, url: str, **kwargs) -> CrawlResult
+    def can_handle(self, url: str) -> bool
+    def get_supported_url_patterns(self) -> List[str]
+    def get_rate_limit_info(self) -> Dict[str, Any]
+```
+
+## 🔄 Development Phases
 
 ### Phase 1: Foundation ✅
 - [x] Basic Gradio interface
@@ -438,68 +350,26 @@ The following tools are available through the MCP server:
 - [x] Web scraping functionality
 - [x] Document processing pipeline
 - [x] Configuration management system
-- [x] Parent-child document structure
 
-### Phase 3: RAG Implementation (Next)
-- [ ] Vector database integration
-- [ ] Semantic search functionality
-- [ ] LLM integration for responses
-- [ ] Context retrieval and generation
+### Phase 3: RAG Implementation ✅
+- [x] Vector database integration
+- [x] Semantic search functionality
+- [x] LLM integration for responses
+- [x] Context retrieval and generation
 
-### Phase 4: Advanced Features
+### Phase 4: RAG-UI Integration ✅
+- [x] Knowledge management integration with RAG
+- [x] Chat interface enhancement with RAG
+- [x] MCP tools integration with RAG
+- [x] UI feedback and status management
+
+### Phase 5: Advanced Features 📋
 - [ ] Multi-user authentication
 - [ ] Knowledge base management
 - [ ] Community sharing features
 - [ ] Advanced analytics
 
-## Environment Variables
-
-### Required Variables Table
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SUPABASE_URL` | Supabase project URL | (required) |
-| `SUPABASE_KEY` | Supabase API key | (required) |
-| `PORT` | Server port | `8000` |
-| `DEBUG` | Debug mode | `false` |
-
-### GitHub Crawler Configuration Table
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GITHUB_TOKEN` | GitHub API token | (optional) |
-| `GITHUB_API_URL` | GitHub API base URL | `https://api.github.com` |
-| `GITHUB_USER_AGENT` | User agent string | `RAGSpace/1.0` |
-| `GITHUB_FILE_TYPES` | Supported file types | `.md,.py,.js,.ts,.txt,.rst,.adoc,.json,.yaml,.yml` |
-| `GITHUB_MAX_FILE_SIZE` | Maximum file size (bytes) | `50000` |
-| `GITHUB_SKIP_PATTERNS` | Patterns to skip | `node_modules,.git,__pycache__,.DS_Store,*.pyc` |
-| `GITHUB_MAX_DEPTH` | Maximum directory depth | `10` |
-| `GITHUB_RATE_LIMIT_WARNING` | Show rate limit warnings | `true` |
-
-### Website Crawler Configuration Table
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `WEBSITE_MAX_DEPTH` | Maximum crawl depth | `3` |
-| `WEBSITE_MAX_PAGES` | Maximum pages to crawl | `10` |
-| `WEBSITE_SKIP_PATTERNS` | URL patterns to skip | `#,javascript:,mailto:,tel:,data:` |
-| `WEBSITE_CONTENT_SELECTORS` | CSS selectors for content | `main,article,.content,#content,.post,.entry` |
-| `WEBSITE_TITLE_SELECTORS` | CSS selectors for titles | `h1,title,.title,.headline` |
-| `WEBSITE_USER_AGENT` | User agent string | `RAGSpace/1.0` |
-| `WEBSITE_TIMEOUT` | Request timeout (seconds) | `10` |
-| `WEBSITE_MAX_CONTENT_SIZE` | Maximum content size (bytes) | `50000` |
-
-### Global Crawler Configuration Table
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `CRAWLER_ENABLE_LOGGING` | Enable crawler logging | `true` |
-| `CRAWLER_LOG_LEVEL` | Log level | `INFO` |
-| `CRAWLER_DEFAULT_TIMEOUT` | Default timeout (seconds) | `30` |
-| `CRAWLER_RETRY_ATTEMPTS` | Number of retry attempts | `3` |
-| `CRAWLER_RETRY_DELAY` | Delay between retries (seconds) | `1` |
-
-## Contributing
+## 🤝 Contributing
 
 1. **Fork the repository**
 2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
@@ -507,23 +377,23 @@ The following tools are available through the MCP server:
 4. **Push to the branch**: `git push origin feature/amazing-feature`
 5. **Open a Pull Request**
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Support
+## 🆘 Support
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/your-username/ragspace/issues)
-- **Discussions**: [Join the community](https://github.com/your-username/ragspace/discussions)
-- **Documentation**: [Full documentation](https://github.com/your-username/ragspace/wiki)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/benyue1978/fun-withus-ragspace/issues)
+- **Discussions**: [Join the community](https://github.com/benyue1978/fun-withus-ragspace/discussions)
+- **Documentation**: [Full documentation](https://github.com/benyue1978/fun-withus-ragspace/wiki)
 
-## Roadmap
+## 🗺️ Roadmap
 
-- [ ] **RAG Pipeline**: Intelligent document processing and retrieval
-- [ ] **Vector Search**: Semantic search across your knowledge base
 - [ ] **Multi-user Support**: Team collaboration and sharing
 - [ ] **Advanced Analytics**: Usage insights and performance metrics
 - [ ] **API Marketplace**: Third-party integrations and plugins
+- [ ] **Mobile Support**: Mobile-optimized interface
+- [ ] **Advanced Search**: Multi-modal search capabilities
 
 ---
 

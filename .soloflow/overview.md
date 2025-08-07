@@ -71,6 +71,7 @@ RAGSpace is a modular RAG (Retrieval-Augmented Generation) system that enables u
 - [x] MCP tools integration with RAG
 - [x] UI feedback and status management
 - [x] End-to-end RAG workflow testing
+- [x] Auto-refresh functionality for Add Content operations
 
 ### Phase 5: Advanced Features 📋 PLANNED
 - [ ] Multi-user authentication
@@ -112,6 +113,7 @@ RAGSpace is a modular RAG (Retrieval-Augmented Generation) system that enables u
 - **Documentation**: Complete project documentation structure
 - **RAG Engine**: Complete RAG implementation with vector search, LLM integration, and hybrid retrieval
 - **RAG-UI Integration**: Complete integration of RAG services with UI components
+- **UI Enhancements**: Auto-refresh functionality for Add Content operations, improved error handling, and better user experience
 
 ### 📋 Next Steps
 - **Phase 5 Implementation**: Add multi-user support and advanced features
@@ -144,6 +146,27 @@ RAGSpace is a modular RAG (Retrieval-Augmented Generation) system that enables u
 - **Chat Interface**: RAG-powered chat with metadata display
 - **MCP Tools**: Enhanced MCP tools with RAG capabilities
 - **UI Feedback**: Real-time status and progress indicators
+- **Auto-refresh**: Automatic UI updates after content operations
+
+## Recent Improvements (August 2025)
+
+### UI/UX Enhancements
+- **Auto-refresh Functionality**: Add Content buttons now automatically refresh documents list and DocSet overview after completion
+- **Improved Error Handling**: Better error messages and user feedback for GitHub repository operations
+- **Enhanced File Path Handling**: GitHub crawler now uses full file paths to avoid duplicate detection issues
+- **Real-time Status Updates**: Better progress indicators and status feedback throughout the application
+
+### Technical Improvements
+- **Database Schema Updates**: Enhanced documents table with proper type constraints for all content types
+- **Crawler Enhancements**: Fixed regex pattern handling in GitHub crawler to prevent "nothing to repeat" errors
+- **Parameter Order Fixes**: Corrected parameter order in UI event handlers for proper docset selection
+- **Comprehensive Testing**: Added new tests for wildcard pattern handling and UI integration
+
+### Bug Fixes
+- **GitHub Repository Processing**: Fixed issues with duplicate file detection and regex pattern errors
+- **UI Event Handling**: Corrected parameter order in upload events for proper docset selection
+- **Database Constraints**: Updated type constraints to support all content types from crawlers
+- **Error Recovery**: Improved error handling and recovery mechanisms
 
 ## RAG System Status
 
@@ -161,6 +184,7 @@ RAGSpace is a modular RAG (Retrieval-Augmented Generation) system that enables u
 2. **Chat Interface**: RAG-powered responses with metadata display
 3. **MCP Tools**: Enhanced tools with RAG capabilities and embedding control
 4. **UI Feedback**: Comprehensive status indicators and progress tracking
+5. **Auto-refresh**: Automatic UI updates after content operations
 
 ### 📋 Planned RAG Enhancements
 1. **Advanced Search**: Multi-modal search capabilities
@@ -170,6 +194,7 @@ RAGSpace is a modular RAG (Retrieval-Augmented Generation) system that enables u
 
 ## Update History
 
+- **2025-08-07**: Updated project status - Recent UI/UX improvements and bug fixes completed
 - **2025-08-07**: Updated project status - Phase 4 RAG-UI integration completed successfully
 - **2025-08-07**: Updated project status - Phase 3 RAG implementation completed, Phase 4 RAG-UI integration in progress
 - **2025-08-05**: Initial project setup and documentation structure
