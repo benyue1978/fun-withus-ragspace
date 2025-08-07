@@ -26,7 +26,7 @@ class TestChatInterfaceUI(UIBaseTest):
         history = []
         new_history, _ = process_query("test query", history)
         
-        # Verify response from mock RAG
+        # Verify response from mock RAG - expect dictionary format for Gradio Chatbot
         assert len(new_history) == 2
         assert new_history[0]["role"] == "user"
         assert new_history[0]["content"] == "test query"
@@ -49,8 +49,11 @@ class TestChatInterfaceUI(UIBaseTest):
         history = []
         new_history, _ = process_query("hello", history)
         
-        # Verify response from mock RAG
+        # Verify response from mock RAG - expect dictionary format for Gradio Chatbot
         assert len(new_history) == 2
+        assert new_history[0]["role"] == "user"
+        assert new_history[0]["content"] == "hello"
+        assert new_history[1]["role"] == "assistant"
         assert "Hello! This is a mock response to your greeting" in new_history[1]["content"]
     
     def test_process_query_no_matches(self, setup_mock_storage, setup_mock_rag):
@@ -69,8 +72,11 @@ class TestChatInterfaceUI(UIBaseTest):
         history = []
         new_history, _ = process_query("xyz123", history)
         
-        # Verify response from mock RAG (should return default response)
+        # Verify response from mock RAG (should return default response) - expect dictionary format
         assert len(new_history) == 2
+        assert new_history[0]["role"] == "user"
+        assert new_history[0]["content"] == "xyz123"
+        assert new_history[1]["role"] == "assistant"
         assert "This is a mock RAG response for testing purposes" in new_history[1]["content"]
     
     def test_process_query_with_history(self, setup_mock_storage, setup_mock_rag):
@@ -92,10 +98,13 @@ class TestChatInterfaceUI(UIBaseTest):
         ]
         new_history, _ = process_query("help", history)
         
-        # Verify response from mock RAG
+        # Verify response from mock RAG - expect dictionary format for Gradio Chatbot
         assert len(new_history) == 4
+        assert new_history[0]["role"] == "user"
         assert new_history[0]["content"] == "Previous question"
+        assert new_history[1]["role"] == "assistant"
         assert new_history[1]["content"] == "Previous answer"
+        assert new_history[2]["role"] == "user"
         assert new_history[2]["content"] == "help"
         assert "I'm a mock RAG system" in new_history[3]["content"]
         assert "help you with test queries" in new_history[3]["content"]
@@ -124,8 +133,11 @@ class TestChatInterfaceUI(UIBaseTest):
         history = []
         new_history, _ = process_query("@#$%", history)
         
-        # Verify response from mock RAG
+        # Verify response from mock RAG - expect dictionary format
         assert len(new_history) == 2
+        assert new_history[0]["role"] == "user"
+        assert new_history[0]["content"] == "@#$%"
+        assert new_history[1]["role"] == "assistant"
         assert "This is a mock RAG response for testing purposes" in new_history[1]["content"]
     
     def test_process_query_case_insensitive(self, setup_mock_storage, setup_mock_rag):
@@ -144,8 +156,11 @@ class TestChatInterfaceUI(UIBaseTest):
         history = []
         new_history, _ = process_query("PYTHON", history)
         
-        # Verify response from mock RAG
+        # Verify response from mock RAG - expect dictionary format
         assert len(new_history) == 2
+        assert new_history[0]["role"] == "user"
+        assert new_history[0]["content"] == "PYTHON"
+        assert new_history[1]["role"] == "assistant"
         assert "This is a mock RAG response for testing purposes" in new_history[1]["content"]
     
     def test_process_query_multiple_docsets(self, setup_mock_storage, setup_mock_rag):
@@ -171,8 +186,10 @@ class TestChatInterfaceUI(UIBaseTest):
         history = []
         new_history, _ = process_query("programming", history)
         
-        # Verify response from mock RAG
+        # Verify response from mock RAG - expect dictionary format
         assert len(new_history) == 2
+        assert new_history[0]["role"] == "user"
+        assert new_history[0]["content"] == "programming"
         response_content = new_history[1]["content"]
         assert "This is a mock RAG response for testing purposes" in response_content
     
@@ -214,14 +231,21 @@ class TestChatInterfaceUI(UIBaseTest):
         history = []
         new_history, _ = process_query("integration", history)
         
-        # Verify response from mock RAG
+        # Verify response from mock RAG - expect dictionary format
         assert len(new_history) == 2
+        assert new_history[0]["role"] == "user"
+        assert new_history[0]["content"] == "integration"
         assert "This is a mock RAG response for testing purposes" in new_history[1]["content"]
         
         # Test follow-up query
         history = new_history
         new_history, _ = process_query("follow up", history)
         
-        # Verify follow-up response
+        # Verify follow-up response - expect dictionary format
         assert len(new_history) == 4
+        assert new_history[0]["role"] == "user"
+        assert new_history[0]["content"] == "integration"
+        assert new_history[1]["role"] == "assistant"
+        assert new_history[2]["role"] == "user"
+        assert new_history[2]["content"] == "follow up"
         assert "This is a mock RAG response for testing purposes" in new_history[3]["content"] 

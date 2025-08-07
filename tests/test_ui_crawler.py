@@ -26,13 +26,12 @@ class TestCrawlerUI:
     
     def test_add_github_repo_ui_basic(self, mock_crawler, mock_docset_manager):
         """Test basic GitHub repository addition through UI"""
-        # Mock the crawler registry to use our mock crawler
         with patch('src.ragspace.services.crawler_registry') as mock_registry:
             mock_registry.get_crawler_for_url.return_value = mock_crawler
             mock_registry.get_all_crawlers.return_value = [mock_crawler]
             
             # Mock the docset manager
-            with patch('src.ragspace.ui.components.knowledge_management.get_docset_manager') as mock_get_manager:
+            with patch('src.ragspace.ui.handlers.get_docset_manager') as mock_get_manager:
                 mock_get_manager.return_value = mock_docset_manager
                 
                 # Create a test docset first
@@ -54,7 +53,7 @@ class TestCrawlerUI:
             mock_registry.get_crawler_for_url.return_value = mock_crawler
             mock_registry.get_all_crawlers.return_value = [mock_crawler]
             
-            with patch('src.ragspace.ui.components.knowledge_management.get_docset_manager') as mock_get_manager:
+            with patch('src.ragspace.ui.handlers.get_docset_manager') as mock_get_manager:
                 mock_get_manager.return_value = mock_docset_manager
                 
                 # Create a test docset
@@ -76,7 +75,7 @@ class TestCrawlerUI:
             mock_registry.get_crawler_for_url.return_value = mock_crawler
             mock_registry.get_all_crawlers.return_value = [mock_crawler]
             
-            with patch('src.ragspace.ui.components.knowledge_management.get_docset_manager') as mock_get_manager:
+            with patch('src.ragspace.ui.handlers.get_docset_manager') as mock_get_manager:
                 mock_get_manager.return_value = mock_docset_manager
                 
                 # Test adding to non-existent docset
@@ -93,7 +92,7 @@ class TestCrawlerUI:
             mock_registry.get_crawler_for_url.return_value = mock_crawler
             mock_registry.get_all_crawlers.return_value = [mock_crawler]
             
-            with patch('src.ragspace.ui.components.knowledge_management.get_docset_manager') as mock_get_manager:
+            with patch('src.ragspace.ui.handlers.get_docset_manager') as mock_get_manager:
                 mock_get_manager.return_value = mock_docset_manager
                 
                 # Create a test docset
@@ -120,7 +119,7 @@ class TestCrawlerUI:
             mock_registry.get_crawler_for_url.return_value = mock_crawler
             mock_registry.get_all_crawlers.return_value = [mock_crawler]
             
-            with patch('src.ragspace.ui.components.knowledge_management.get_docset_manager') as mock_get_manager:
+            with patch('src.ragspace.ui.handlers.get_docset_manager') as mock_get_manager:
                 mock_get_manager.return_value = mock_docset_manager
                 
                 # Create a test docset
@@ -214,7 +213,7 @@ class TestCrawlerUI:
             mock_registry.get_crawler_for_url.return_value = failing_crawler
             mock_registry.get_all_crawlers.return_value = [failing_crawler]
             
-            with patch('src.ragspace.ui.components.knowledge_management.get_docset_manager') as mock_get_manager:
+            with patch('src.ragspace.ui.handlers.get_docset_manager') as mock_get_manager:
                 mock_get_manager.return_value = mock_docset_manager
                 
                 # Create a test docset
@@ -235,7 +234,7 @@ class TestCrawlerUI:
             mock_registry.get_crawler_for_url.return_value = None
             mock_registry.get_all_crawlers.return_value = []
             
-            with patch('src.ragspace.ui.components.knowledge_management.get_docset_manager') as mock_get_manager:
+            with patch('src.ragspace.ui.handlers.get_docset_manager') as mock_get_manager:
                 mock_get_manager.return_value = mock_docset_manager
                 
                 # Create a test docset
@@ -256,7 +255,7 @@ class TestCrawlerUI:
             mock_registry.get_crawler_for_url.return_value = mock_crawler
             mock_registry.get_all_crawlers.return_value = [mock_crawler]
             
-            with patch('src.ragspace.ui.components.knowledge_management.get_docset_manager') as mock_get_manager:
+            with patch('src.ragspace.ui.handlers.get_docset_manager') as mock_get_manager:
                 mock_get_manager.return_value = mock_docset_manager
                 
                 # Create a test docset
@@ -288,7 +287,7 @@ class TestCrawlerUI:
             mock_registry.get_crawler_for_url.return_value = mock_crawler
             mock_registry.get_all_crawlers.return_value = [mock_crawler]
             
-            with patch('src.ragspace.ui.components.knowledge_management.get_docset_manager') as mock_get_manager:
+            with patch('src.ragspace.ui.handlers.get_docset_manager') as mock_get_manager:
                 mock_get_manager.return_value = mock_docset_manager
                 
                 # Create a test docset
@@ -312,7 +311,7 @@ class TestCrawlerUI:
             mock_registry.get_crawler_for_url.return_value = mock_crawler
             mock_registry.get_all_crawlers.return_value = [mock_crawler]
             
-            with patch('src.ragspace.ui.components.knowledge_management.get_docset_manager') as mock_get_manager:
+            with patch('src.ragspace.ui.handlers.get_docset_manager') as mock_get_manager:
                 mock_get_manager.return_value = mock_docset_manager
                 
                 # Create a test docset

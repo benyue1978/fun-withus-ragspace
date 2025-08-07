@@ -37,44 +37,71 @@ class TestMCPToolsUI(UIBaseTest):
         # Verify response
         assert "No docsets found" in result
     
-    def test_ask_basic(self, setup_mock_storage, setup_mock_rag):
-        """Test basic ask functionality via MCP"""
-        # Test ask with mock RAG
-        result = ask("test query")
-        
-        # Verify response from mock RAG
-        assert "This is a test response from the mock RAG system" in result
+    def test_ask_basic(self):
+        """Test basic ask functionality"""
+        with patch('src.ragspace.ui.handlers.get_rag_manager') as mock_get_rag:
+            mock_rag = Mock()
+            
+            # Create async generator
+            async def mock_generator():
+                yield "This is a test response from the mock RAG system."
+            
+            mock_rag.query_knowledge_base.return_value = mock_generator()
+            mock_get_rag.return_value = mock_rag
+            
+            result = ask("test query")
+            
+            # Check that the result contains the expected response
+            assert "This is a test response from the mock RAG system" in str(result)
     
-    def test_ask_empty_query(self, setup_mock_storage, setup_mock_rag):
+    def test_ask_empty_query(self):
         """Test ask with empty query"""
         result = ask("")
-        
-        # Verify error response
         assert "Please provide a query" in result
     
-    def test_ask_with_docset(self, setup_mock_storage, setup_mock_rag):
+    def test_ask_with_docset(self):
         """Test ask with specific docset"""
-        # Setup test data
-        mock_manager = setup_mock_storage
-        mock_manager.create_docset("test-docset", "Test docset")
-        
-        # Test ask with docset
-        result = ask("hello", "test-docset")
-        
-        # Verify response from mock RAG
-        assert "Hello! This is a mock response to your greeting" in result
+        with patch('src.ragspace.ui.handlers.get_rag_manager') as mock_get_rag:
+            mock_rag = Mock()
+            
+            # Create async generator
+            async def mock_generator():
+                yield "Hello! This is a mock response to your greeting."
+            
+            mock_rag.query_knowledge_base.return_value = mock_generator()
+            mock_get_rag.return_value = mock_rag
+            
+            result = ask("hello", "test-docset")
+            
+            # Check that the result contains the expected response
+            assert "Hello! This is a mock response to your greeting" in str(result)
     
-    def test_ask_error_handling(self, setup_mock_storage, setup_mock_rag):
+    def test_ask_error_handling(self):
         """Test ask error handling"""
-        result = ask("error test")
-        
-        # Verify error response from mock RAG
-        assert "❌ Mock error" in result
+        with patch('src.ragspace.ui.handlers.get_rag_manager') as mock_get_rag:
+            mock_rag = Mock()
+            mock_rag.query_knowledge_base.side_effect = Exception("❌ Mock error: This is a test error response.")
+            mock_get_rag.return_value = mock_rag
+            
+            result = ask("error test")
+            
+            # Check that the result contains the error message
+            assert "❌ Mock error" in str(result)
     
-    def test_ask_help_query(self, setup_mock_storage, setup_mock_rag):
+    def test_ask_help_query(self):
         """Test ask with help query"""
-        result = ask("help me")
-        
-        # Verify help response from mock RAG
-        assert "I'm a mock RAG system" in result
-        assert "help you with test queries" in result 
+        with patch('src.ragspace.ui.handlers.get_rag_manager') as mock_get_rag:
+            mock_rag = Mock()
+            
+            # Create async generator
+            async def mock_generator():
+                yield "I'm a mock RAG system. I can help you with test queries."
+            
+            mock_rag.query_knowledge_base.return_value = mock_generator()
+            mock_get_rag.return_value = mock_rag
+            
+            result = ask("help me")
+            
+            # Check that the result contains the expected response
+            assert "I'm a mock RAG system" in str(result)
+            assert "help you with test queries" in str(result) 

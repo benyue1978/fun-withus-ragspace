@@ -4,6 +4,7 @@ Test crawler system functionality
 
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
+import re
 
 from src.ragspace.services.crawler import (
     CrawlerInterface,
@@ -284,6 +285,102 @@ class TestGitHubCrawler:
         
         result = crawler.get_rate_limit_info()
         assert result == {}  # Should return empty dict on error
+    
+    def test_convert_wildcard_to_regex(self):
+        """Test wildcard pattern conversion to regex"""
+        crawler = GitHubCrawler()
+        
+        # Test various wildcard patterns
+        test_cases = [
+            ("*.pyc", r".*\.pyc"),
+            ("*.log", r".*\.log"),
+            ("*.py", r".*\.py"),
+            ("node_modules", "node_modules"),
+            (".git", r"\.git"),
+            ("__pycache__", r"__pycache__"),
+            ("*.txt", r".*\.txt"),
+            ("test?.py", r"test.\.py"),
+        ]
+        
+        for wildcard, expected_regex in test_cases:
+            result = crawler._convert_wildcard_to_regex(wildcard)
+            assert result == expected_regex, f"Failed for {wildcard}: expected {expected_regex}, got {result}"
+    
+    def test_should_skip_item_with_wildcards(self):
+        """Test should_skip_item with wildcard patterns"""
+        crawler = GitHubCrawler()
+        
+        # Test items that should be skipped
+        skip_items = [
+            ("test.pyc", ["*.pyc"]),
+            ("app.log", ["*.log"]),
+            ("node_modules", ["node_modules"]),
+            ("__pycache__", ["__pycache__"]),
+            ("test.py", ["*.py"]),
+        ]
+        
+        for item_name, patterns in skip_items:
+            item = CrawledItem(
+                title=item_name,
+                content="test content",
+                content_type=ContentType.CODE
+            )
+            
+            # Temporarily set config for testing
+            original_config = crawler.config
+            crawler.config = {"skip_patterns": patterns}
+            
+            try:
+                result = crawler.should_skip_item(item)
+                assert result is True, f"Item {item_name} should be skipped with patterns {patterns}"
+            finally:
+                crawler.config = original_config
+    
+    def test_should_skip_item_with_invalid_regex(self):
+        """Test should_skip_item handles invalid regex patterns gracefully"""
+        crawler = GitHubCrawler()
+        
+        item = CrawledItem(
+            title="test.py",
+            content="test content",
+            content_type=ContentType.CODE,
+            metadata={}  # Add empty metadata to avoid None error
+        )
+        
+        # Test with invalid regex pattern
+        crawler.config = {"skip_patterns": ["[invalid-regex"]}
+        
+        # Should not raise an exception, should handle gracefully
+        result = crawler.should_skip_item(item)
+        # Should return False since the pattern is invalid
+        assert result is False
+    
+    def test_wildcard_patterns_should_not_cause_regex_error(self):
+        """Test that wildcard patterns like *.pyc don't cause regex errors"""
+        crawler = GitHubCrawler()
+        
+        item = CrawledItem(
+            title="test.pyc",
+            content="test content",
+            content_type=ContentType.CODE,
+            metadata={}
+        )
+        
+        # Test with wildcard patterns that used to cause regex errors
+        wildcard_patterns = ["*.pyc", "*.log", "*.py", "test?.py"]
+        
+        for pattern in wildcard_patterns:
+            crawler.config = {"skip_patterns": [pattern]}
+            
+            # This should not raise a regex error
+            try:
+                result = crawler.should_skip_item(item)
+                # Should handle gracefully without exceptions
+                assert isinstance(result, bool)
+            except re.error as e:
+                pytest.fail(f"Wildcard pattern '{pattern}' caused regex error: {e}")
+            except Exception as e:
+                pytest.fail(f"Wildcard pattern '{pattern}' caused unexpected error: {e}")
 
 
 class TestWebsiteCrawler:

@@ -118,9 +118,12 @@ def create_gradio_interface():
         
         with gr.Tabs() as tabs:
             # Create UI components
-            create_knowledge_management_tab()
-            create_chat_interface_tab()
-            create_mcp_tools_tab()
+            with gr.Tab("📚 Knowledge Management", id=1):
+                create_knowledge_management_tab()
+            with gr.Tab("💬 Chat Interface", id=0):
+                create_chat_interface_tab()
+            with gr.Tab("🔧 MCP Tools", id=2):
+                create_mcp_tools_tab()
         
         # Footer
         gr.Markdown("---")
@@ -164,7 +167,8 @@ def main():
             server_port=int(os.getenv("PORT", 8000)),
             mcp_server=True,  # Enable MCP server
             share=False,  # Disable public sharing for production
-            debug=is_dev  # Enable debug mode for development
+            debug=is_dev,  # Enable debug mode for development
+            show_error=True  # Show detailed error messages
         )
         
     except Exception as e:

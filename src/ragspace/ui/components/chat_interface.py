@@ -1,144 +1,183 @@
 """
-Chat Interface UI Component
+Chat Interface Component - Improved Architecture
+Using component-based architecture with better separation of concerns
 """
 
 import gradio as gr
-import asyncio
+from typing import List, Dict, Any, Optional
+from .base_component import BaseComponent, ComponentState
 
-def get_docset_manager():
-    """Get the current docset manager"""
-    from src.ragspace.storage import docset_manager
-    return docset_manager
 
-from src.ragspace.ui.handlers import (
-    process_query, 
-    clear_chat, 
-    trigger_embedding_process,
-    get_embedding_status,
-    get_rag_metadata
-)
-
-def create_chat_interface_tab():
-    """Create the chat interface tab"""
-    with gr.Tab("💬 Chat with Knowledge Base", id="chat_tab") as tab:
+class ChatInterfaceComponent(BaseComponent):
+    """Chat Interface Component with improved architecture"""
+    
+    def __init__(self):
+        super().__init__("chat_interface")
+        self.docset_manager = self._get_docset_manager()
+    
+    def _get_docset_manager(self):
+        """Get docset manager - separated for better testing"""
+        from src.ragspace.storage import docset_manager
+        return docset_manager
+    
+    def create_ui(self):
+        """Create the UI - clean separation of UI creation"""
+        # Initialize data
+        initial_data = self._get_initial_data()
+        
+        # Create layout
         with gr.Row():
-            # Left sidebar - Chat settings
+            # Left sidebar - DocSet selection
             with gr.Column(scale=1, elem_classes=["sidebar"]):
-                gr.Markdown("## 💬 Chat Settings", elem_classes=["markdown-enhanced"])
-                
-                # DocSet selection for targeted queries
-                initial_choices = []
-                try:
-                    docsets = get_docset_manager().get_docsets_dict()
-                    initial_choices = list(docsets.keys()) if docsets else []
-                except Exception as e:
-                    print(f"Error loading docsets: {e}")
-                
-                chat_docset_dropdown = gr.Dropdown(
-                    label="🔍 Search in Specific DocSet",
-                    choices=initial_choices,
-                    interactive=True
-                )
-                
-                # Refresh docset list button
-                refresh_chat_docsets_button = gr.Button(
-                    "🔄 Refresh DocSets", 
-                    variant="primary", 
-                    size="lg",
-                    elem_classes=["button-primary"]
-                )
-                
-                clear_chat_button = gr.Button(
-                    "🗑️ Clear Chat",
-                    variant="primary",
-                    size="lg",
-                    elem_classes=["button-primary"]
-                )
+                self._create_sidebar_section(initial_data)
             
-            # Main chat area
+            # Right main content - Chat area
             with gr.Column(scale=3, elem_classes=["main-content"]):
-                gr.Markdown("## 🤖 AI Assistant")
-                
-                # Chat history with modern styling
-                chat_history = gr.Chatbot(
-                    value=[],
-                    height=400,
-                    label="💬 Chat History",
-                    elem_classes=["chat-modern"],
-                    type="messages"
-                )
-                
-                # Query input with modern styling
-                query_input = gr.Textbox(
-                    type="text",
-                    lines=2,
-                    placeholder="Ask a question about your documents...",
-                    label="💬 Your Question",
-                    elem_classes=["input-modern"]
-                )
-                
-                # Query button with modern styling
-                query_button = gr.Button(
-                    "Ask Question",
-                    variant="primary",
-                    size="lg",
-                    elem_classes=["button-primary"]
-                )
-        
-        # Connect chat interactions
-        # Auto-update docset dropdown on page load
-        def load_chat_docsets():
-            """Load docsets into chat dropdown"""
-            docsets = get_docset_manager().get_docsets_dict()
+                self._create_chat_section(initial_data)
+    
+    def _get_initial_data(self) -> Dict[str, Any]:
+        """Get initial data - separated for better testing"""
+        try:
+            docsets = self.docset_manager.get_docsets_dict()
             choices = list(docsets.keys()) if docsets else []
-            return gr.Dropdown(choices=choices)
-        
-        def process_chat_query(message, chat_history, docset_name):
-            """Process chat query"""
-            if not message.strip():
-                return chat_history, ""
+            selected = choices[0] if choices else None
             
-            try:
-                # Process the query
-                new_history, _ = process_query(message, chat_history, docset_name)
-                return new_history, ""
-                
-            except Exception as e:
-                error_response = f"❌ Error processing query: {str(e)}"
-                new_history = chat_history + [
-                    {"role": "user", "content": message},
-                    {"role": "assistant", "content": error_response}
-                ]
-                return new_history, ""
+            return {
+                "choices": choices,
+                "selected": selected
+            }
+        except Exception as e:
+            print(f"Error getting initial data: {e}")
+            return {"choices": [], "selected": None}
+    
+    def _create_sidebar_section(self, initial_data: Dict[str, Any]):
+        """Create sidebar section"""
+        gr.Markdown("## 🎯 Chat Settings", elem_classes=["markdown-enhanced"])
         
-        # Refresh docset list button
-        refresh_chat_docsets_button.click(
-            load_chat_docsets,
-            outputs=[chat_docset_dropdown],
-            api_name=False
-        )
+        with gr.Group(elem_classes=["card"]):
+            gr.Markdown("### 📚 DocSet Selection")
+            
+            # Refresh docset list button
+            refresh_chat_docsets_button = gr.Button(
+                "🔄 Refresh DocSets", 
+                variant="primary", 
+                size="lg",
+                elem_classes=["button-primary"]
+            )
+            
+            # DocSet dropdown
+            chat_docset_dropdown = gr.Dropdown(
+                choices=initial_data["choices"],
+                value=initial_data["selected"],
+                label="📚 Select DocSet for Chat",
+                interactive=True,
+                elem_classes=["input-modern"]
+            )
+            
+            # Clear chat button
+            clear_chat_button = gr.Button(
+                "🗑️ Clear Chat",
+                variant="primary",
+                size="lg",
+                elem_classes=["button-primary"]
+            )
         
-        # Query button
-        query_button.click(
-            process_chat_query, 
-            [query_input, chat_history, chat_docset_dropdown], 
-            [chat_history, query_input],
-            api_name=False
-        )
+        # Register components
+        self.add_component("refresh_chat_docsets_button", refresh_chat_docsets_button)
+        self.add_component("chat_docset_dropdown", chat_docset_dropdown)
+        self.add_component("clear_chat_button", clear_chat_button)
+    
+    def _create_chat_section(self, initial_data: Dict[str, Any]):
+        """Create chat section"""
+        gr.Markdown("## 💬 Chat with RAG", elem_classes=["markdown-enhanced"])
         
-        # Enter key submission
-        query_input.submit(
-            process_chat_query, 
-            [query_input, chat_history, chat_docset_dropdown], 
-            [chat_history, query_input],
-            api_name=False
-        )
+        with gr.Group(elem_classes=["card"]):
+            gr.Markdown("### 🤖 AI Assistant")
+            
+            # Chat history
+            chat_history = gr.Chatbot(
+                label="💬 Chat History",
+                height=400,
+                elem_classes=["chat-modern"],
+                type="messages"
+            )
+            
+            # Query input
+            query_input = gr.Textbox(
+                type="text",
+                lines=2,
+                placeholder="Ask a question about your documents...",
+                label="📝 Your Question",
+                elem_classes=["input-modern"]
+            )
+            
+            # Query button
+            query_button = gr.Button(
+                "Ask Question",
+                variant="primary",
+                size="lg",
+                elem_classes=["button-primary"]
+            )
         
-        # Clear chat button
-        clear_chat_button.click(
-            clear_chat, 
-            outputs=[chat_history, query_input],
+        # Register components
+        self.add_component("chat_history", chat_history)
+        self.add_component("query_input", query_input)
+        self.add_component("query_button", query_button)
+    
+    def setup_events(self):
+        """Setup event handlers - clean separation of event binding"""
+        # Get components
+        refresh_button = self.get_component("refresh_chat_docsets_button")
+        docset_dropdown = self.get_component("chat_docset_dropdown")
+        clear_button = self.get_component("clear_chat_button")
+        chat_history = self.get_component("chat_history")
+        query_input = self.get_component("query_input")
+        query_button = self.get_component("query_button")
+        
+        # Setup event handlers
+        self._setup_refresh_events(refresh_button, docset_dropdown)
+        self._setup_chat_events(clear_button, chat_history, query_input, query_button, docset_dropdown)
+    
+    def _setup_refresh_events(self, refresh_button, docset_dropdown):
+        """Setup refresh related events"""
+        from src.ragspace.ui.handlers import update_docset_lists
+        
+        refresh_button.click(
+            update_docset_lists,
+            outputs=[docset_dropdown],
             api_name=False
         )
     
-    return tab 
+    def _setup_chat_events(self, clear_button, chat_history, query_input, query_button, docset_dropdown):
+        """Setup chat related events"""
+        from src.ragspace.ui.handlers import process_rag_query, clear_chat_history
+        
+        # Clear chat
+        clear_button.click(
+            clear_chat_history,
+            outputs=[chat_history],
+            api_name=False
+        )
+        
+        # Process query
+        query_button.click(
+            process_rag_query,
+            [query_input, chat_history, docset_dropdown],
+            [chat_history, query_input],
+            api_name=False
+        )
+        
+        # Enter key support
+        query_input.submit(
+            process_rag_query,
+            [query_input, chat_history, docset_dropdown],
+            [chat_history, query_input],
+            api_name=False
+        )
+
+
+def create_chat_interface_tab():
+    """Create the chat interface tab using the improved component"""
+    component = ChatInterfaceComponent()
+    component.create_ui()
+    component.setup_events() 

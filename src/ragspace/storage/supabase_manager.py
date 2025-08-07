@@ -202,6 +202,9 @@ class SupabaseDocsetManager(StorageInterface):
     def add_url_to_docset(self, url: str, docset_name: str, **kwargs) -> str:
         """Add content from URL to a specific docset using appropriate crawler"""
         try:
+            # Register crawlers if not already registered
+            self._register_crawlers()
+            
             # Get docset by name
             docset = self.get_docset_by_name(docset_name)
             if not docset:

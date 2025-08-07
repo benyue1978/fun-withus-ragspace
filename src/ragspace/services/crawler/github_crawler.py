@@ -251,7 +251,7 @@ class GitHubCrawler(CrawlerInterface):
                     
                     # Create crawled item
                     item = CrawledItem(
-                        title=file_info["name"],
+                        title=file_info["path"],  # Use full path as title to avoid duplicates
                         content=content,
                         url=file_info["download_url"] or file_info["url"],
                         content_type=content_type,
@@ -307,8 +307,14 @@ class GitHubCrawler(CrawlerInterface):
         # Check skip patterns
         skip_patterns = self.config.get("skip_patterns", [])
         for pattern in skip_patterns:
-            if re.search(pattern, item.title, re.IGNORECASE):
-                return True
+            # Convert shell wildcard patterns to regex patterns
+            regex_pattern = self._convert_wildcard_to_regex(pattern)
+            try:
+                if re.search(regex_pattern, item.title, re.IGNORECASE):
+                    return True
+            except re.error as e:
+                logger.warning(f"Invalid regex pattern '{pattern}': {e}")
+                continue
         
         # Check file size
         max_size = self.config.get("max_file_size", 1024 * 1024)
@@ -321,6 +327,18 @@ class GitHubCrawler(CrawlerInterface):
         
         return False
 
+    def _convert_wildcard_to_regex(self, pattern: str) -> str:
+        """Convert shell wildcard pattern to regex pattern"""
+        # First, escape all regex special characters
+        pattern = re.escape(pattern)
+        
+        # Then convert wildcards to regex patterns
+        # Replace escaped wildcards with their regex equivalents
+        pattern = pattern.replace(r'\*', '.*')  # * -> .*
+        pattern = pattern.replace(r'\?', '.')   # ? -> .
+        
+        return pattern
+    
     def get_rate_limit_info(self) -> Dict[str, Any]:
         """Get GitHub API rate limit information"""
         try:
