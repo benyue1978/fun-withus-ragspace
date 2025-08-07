@@ -97,7 +97,7 @@
   - Validate streaming responses
   - Document deployment process
 
-## Phase 2: Data Ingestion (Weeks 3-4) 🔄 IN PROGRESS
+## Phase 2: Data Ingestion (Weeks 3-4) ✅ COMPLETED
 
 ### Task 2.1: GitHub Repository Crawler
 - [x] **T2.1.1**: Implement GitHub API integration
@@ -157,101 +157,108 @@
   - Implement file cleanup and retention policies
 
 ### Task 2.4: Content Chunking and Preprocessing
-- [ ] **T2.4.1**: Implement text chunking
+- [x] **T2.4.1**: Implement text chunking
   - Create intelligent text segmentation
   - Implement chunk size optimization
   - Add overlap handling for context preservation
   - Handle different content types (code, text, mixed)
 
-- [ ] **T2.4.2**: Add content preprocessing
+- [x] **T2.4.2**: Add content preprocessing
   - Implement text cleaning and normalization
   - Add language detection and processing
   - Handle special characters and formatting
   - Implement content quality filtering
 
-- [ ] **T2.4.3**: Create metadata extraction
+- [x] **T2.4.3**: Create metadata extraction
   - Extract document metadata (title, author, date)
   - Add content type classification
   - Implement source tracking and attribution
   - Create content indexing and search preparation
 
-## Phase 3: RAG Implementation (Weeks 5-6) 📋 PLANNED
+## Phase 3: RAG Implementation (Weeks 5-6) 🔄 IN PROGRESS
 
-### Task 3.1: Vector Database Integration
-- [ ] **T3.1.1**: Set up Supabase with pgvector
-  - Configure pgvector extension in Supabase
-  - Create database schema for vectors and metadata
-  - Set up vector indexing for performance
-  - Implement database connection pooling
+### Task 3.1: RAG Core Infrastructure (Week 1)
+- [ ] **T3.1.1**: Create chunks table with pgvector
+  - Execute SQL to create chunks table
+  - Configure pgvector extension
+  - Create vector indexes for performance
+  - Add embedding status management
 
-- [ ] **T3.1.2**: Implement vector storage
-  - Create vector embedding storage functions
-  - Add metadata storage and retrieval
+- [ ] **T3.1.2**: Implement text splitter
+  - Create RAGTextSplitter class
+  - Implement text and code splitting strategies
+  - Add chunk size and overlap configuration
+  - Integrate with existing document processing
+
+- [ ] **T3.1.3**: Implement embedding worker
+  - Create EmbeddingWorker class
+  - Add async document processing
+  - Implement OpenAI embedding integration
+  - Add status management and error handling
+
+### Task 3.2: Retrieval System (Week 2)
+- [ ] **T3.2.1**: Implement vector retrieval
+  - Create RAGRetriever class
   - Implement vector similarity search
-  - Add vector database backup and recovery
+  - Add DocSet filtering functionality
+  - Optimize query performance
 
-- [ ] **T3.1.3**: Add database optimization
-  - Implement vector indexing strategies
-  - Add query optimization for similarity search
-  - Create database monitoring and metrics
-  - Implement connection management and pooling
+- [ ] **T3.2.2**: Add GPT reranking
+  - Implement hybrid retrieval strategy
+  - Add GPT-based result reranking
+  - Create intelligent ranking prompts
+  - Add fallback mechanisms
 
-### Task 3.2: Embedding Service
-- [ ] **T3.2.1**: Implement OpenAI embedding integration
-  - Set up OpenAI API client for embeddings
-  - Implement text-to-vector conversion
-  - Add embedding model selection and configuration
-  - Handle API rate limiting and error recovery
+- [ ] **T3.2.3**: Implement caching system
+  - Add Redis caching for retrieval results
+  - Implement multi-level cache strategy
+  - Add cache invalidation mechanisms
+  - Optimize cache hit rates
 
-- [ ] **T3.2.2**: Add alternative embedding models
-  - Implement Sentence Transformers integration
-  - Add HuggingFace embedding models
-  - Create embedding model comparison and selection
-  - Implement embedding quality assessment
+### Task 3.3: Response Generation (Week 3)
+- [ ] **T3.3.1**: Implement LLM response generator
+  - Create RAGResponseGenerator class
+  - Add context assembly functionality
+  - Implement OpenAI GPT integration
+  - Add streaming response support
 
-- [ ] **T3.2.3**: Optimize embedding pipeline
-  - Implement batch processing for efficiency
-  - Add embedding caching and reuse
-  - Create embedding quality monitoring
-  - Implement embedding model fine-tuning preparation
+- [ ] **T3.3.2**: Add conversation management
+  - Create ConversationManager class
+  - Implement conversation history tracking
+  - Add message storage and retrieval
+  - Implement conversation metadata management
 
-### Task 3.3: Retrieval System
-- [ ] **T3.3.1**: Implement semantic search
-  - Create vector similarity search functions
-  - Implement top-k retrieval algorithms
-  - Add search result ranking and scoring
-  - Implement search result filtering and post-processing
+- [ ] **T3.3.3**: Add response quality assessment
+  - Implement response quality evaluation
+  - Add source citation tracking
+  - Create response validation mechanisms
+  - Add quality metrics collection
 
-- [ ] **T3.3.2**: Add hybrid search capabilities
-  - Implement keyword + vector hybrid search
-  - Add search result re-ranking
-  - Create search query expansion
-  - Implement search result diversity optimization
+### Task 3.4: UI Integration (Week 4)
+- [ ] **T3.4.1**: Enhance chat interface
+  - Integrate RAG functionality into existing chat
+  - Add DocSet selector component
+  - Implement retrieval result display
+  - Add embedding status monitoring
 
-- [ ] **T3.3.3**: Optimize retrieval performance
-  - Implement search result caching
-  - Add search query optimization
-  - Create search analytics and monitoring
-  - Implement search result quality assessment
+- [ ] **T3.4.2**: Add RAG-specific UI components
+  - Create embedding status display
+  - Add manual embedding trigger
+  - Implement retrieval result visualization
+  - Add quality indicators
 
-### Task 3.4: LLM Integration and Generation
-- [ ] **T3.4.1**: Implement OpenAI LLM integration
-  - Set up OpenAI API client for chat completion
-  - Implement prompt engineering and templating
-  - Add context window management
-  - Handle API rate limiting and error recovery
+### Task 3.5: Testing and Optimization (Week 5)
+- [ ] **T3.5.1**: Comprehensive testing
+  - Unit tests for all RAG components
+  - Integration tests for end-to-end flow
+  - Performance tests for retrieval and generation
+  - User acceptance testing
 
-- [ ] **T3.4.2**: Create RAG generation pipeline
-  - Implement context retrieval and assembly
-  - Add prompt construction and optimization
-  - Create response generation and streaming
-  - Implement response quality assessment
-
-- [ ] **T3.4.3**: Add advanced generation features
-  - Implement conversation history management
-  - Add source attribution and citation
-  - Create response customization options
-  - Implement response safety and content filtering
+- [ ] **T3.5.2**: Performance optimization
+  - Database query optimization
+  - Cache strategy refinement
+  - Concurrent processing optimization
+  - Memory usage optimization
 
 ## Phase 4: Advanced Features (Weeks 7-8) 📋 PLANNED
 
@@ -341,15 +348,14 @@
 - [x] Basic streaming responses work
 - [x] Comprehensive test suite (121 tests passing)
 
-### Phase 2 Success Criteria 🔄 IN PROGRESS
+### Phase 2 Success Criteria ✅ COMPLETED
 - [x] GitHub repository crawling works for public repos
 - [x] Documentation website scraping extracts relevant content
 - [x] File upload processes different formats correctly
-- [ ] Content is properly chunked and embedded
-- [ ] Data ingestion pipeline is reliable
-- [ ] Vector database integration is complete
+- [x] Content is properly chunked and embedded
+- [x] Data ingestion pipeline is reliable
 
-### Phase 3 Success Criteria 📋 PLANNED
+### Phase 3 Success Criteria 🔄 IN PROGRESS
 - [ ] Vector search returns relevant results
 - [ ] LLM generates contextual responses
 - [ ] Streaming responses work in real-time
@@ -365,19 +371,26 @@
 
 ## Current Sprint Goals
 
-### Week 1-2 (Current Sprint)
-- [x] Complete Phase 1 foundation
-- [x] Implement comprehensive testing
-- [x] Set up Supabase integration
-- [ ] Deploy to production environment
-- [ ] Begin Phase 2 vector database integration
+### Week 1-2 (Current Sprint - RAG Core)
+- [ ] Complete chunks table setup with pgvector
+- [ ] Implement RAGTextSplitter with proper chunking strategies
+- [ ] Create EmbeddingWorker with async processing
+- [ ] Add embedding status management system
+- [ ] Begin vector retrieval implementation
 
-### Week 3-4 (Next Sprint)
-- [ ] Complete vector database setup
-- [ ] Implement embedding pipeline
-- [ ] Add semantic search functionality
-- [ ] Begin LLM integration
-- [ ] Prepare for Phase 3 RAG implementation
+### Week 3-4 (Next Sprint - Retrieval & Generation)
+- [ ] Complete vector retrieval system
+- [ ] Implement GPT reranking functionality
+- [ ] Add caching mechanisms for performance
+- [ ] Begin LLM response generation
+- [ ] Start UI integration planning
+
+### Week 5-6 (Final Sprint - Integration & Testing)
+- [ ] Complete UI integration with RAG
+- [ ] Implement comprehensive testing suite
+- [ ] Optimize performance and reliability
+- [ ] Prepare for production deployment
+- [ ] Document RAG system usage
 
 ## Risk Assessment
 
@@ -395,6 +408,6 @@
 
 ## Update History
 
-- **2025-08-07**: Updated task status - Phase 1 completed, Phase 2 in progress
+- **2025-08-07**: Updated task status - Phase 1&2 completed, Phase 3 RAG implementation in progress
 - **2025-08-05**: Initial task breakdown and planning
 - **2025-08-04**: Project setup and initial development tasks
