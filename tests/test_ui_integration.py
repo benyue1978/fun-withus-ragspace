@@ -13,10 +13,25 @@ class TestUIIntegration(UIBaseTest):
         """Test UI component integration"""
         from src.ragspace.ui.handlers import process_query
         
-        # Test chat interface
-        history = []
-        ask_result = process_query("hello", history)
-        assert "Hello! This is a mock response to your greeting" in str(ask_result)
+        # Test chat interface with mock
+        with patch('src.ragspace.ui.handlers.get_rag_manager') as mock_get_rag:
+            mock_rag = Mock()
+            
+            async def mock_query_with_metadata(query, docsets=None):
+                return {
+                    "status": "success",
+                    "query": query,
+                    "response": "Hello! This is a mock response to your greeting.",
+                    "sources": [],
+                    "metadata": {}
+                }
+            
+            mock_rag.query_with_metadata = mock_query_with_metadata
+            mock_get_rag.return_value = mock_rag
+            
+            history = []
+            ask_result = process_query("hello", history)
+            assert "Hello! This is a mock response to your greeting" in str(ask_result)
     
     def test_knowledge_management_integration(self):
         """Test knowledge management integration"""
@@ -30,23 +45,69 @@ class TestUIIntegration(UIBaseTest):
         """Test chat interface integration"""
         from src.ragspace.ui.handlers import process_query
         
-        # Test chat query
-        history = []
-        result = process_query("test query", history)
-        assert "This is a test response from the mock RAG system" in str(result)
+        # Test chat query with mock
+        with patch('src.ragspace.ui.handlers.get_rag_manager') as mock_get_rag:
+            mock_rag = Mock()
+            
+            async def mock_query_with_metadata(query, docsets=None):
+                return {
+                    "status": "success",
+                    "query": query,
+                    "response": "This is a test response from the mock RAG system.",
+                    "sources": [],
+                    "metadata": {}
+                }
+            
+            mock_rag.query_with_metadata = mock_query_with_metadata
+            mock_get_rag.return_value = mock_rag
+            
+            history = []
+            result = process_query("test query", history)
+            assert "This is a test response from the mock RAG system" in str(result)
     
     def test_mcp_tools_ui_integration(self):
         """Test MCP tools UI integration"""
         from src.ragspace.ui.handlers import test_ask_tool
         
-        # Test MCP ask tool
-        result = test_ask_tool("test query", None)
-        assert "This is a test response from the mock RAG system" in str(result)
+        # Test MCP ask tool with mock
+        with patch('src.ragspace.ui.handlers.get_rag_manager') as mock_get_rag:
+            mock_rag = Mock()
+            
+            async def mock_query_with_metadata(query, docsets=None):
+                return {
+                    "status": "success",
+                    "query": query,
+                    "response": "This is a test response from the mock RAG system.",
+                    "sources": [],
+                    "metadata": {}
+                }
+            
+            mock_rag.query_with_metadata = mock_query_with_metadata
+            mock_get_rag.return_value = mock_rag
+            
+            result = test_ask_tool("test query", None)
+            assert "This is a test response from the mock RAG system" in str(result)
     
     def test_error_handling_integration(self):
         """Test error handling integration"""
         from src.ragspace.ui.handlers import test_ask_tool
         
-        # Test error handling
-        result = test_ask_tool("error test", None)
-        assert "❌ Mock error" in str(result) 
+        # Test error handling with mock
+        with patch('src.ragspace.ui.handlers.get_rag_manager') as mock_get_rag:
+            mock_rag = Mock()
+            
+            async def mock_query_with_metadata(query, docsets=None):
+                return {
+                    "status": "error",
+                    "query": query,
+                    "error": "❌ Mock error: This is a test error response.",
+                    "response": "",
+                    "sources": [],
+                    "metadata": {}
+                }
+            
+            mock_rag.query_with_metadata = mock_query_with_metadata
+            mock_get_rag.return_value = mock_rag
+            
+            result = test_ask_tool("error test", None)
+            assert "❌ Mock error" in str(result) 

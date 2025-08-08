@@ -42,11 +42,17 @@ class TestMCPToolsUI(UIBaseTest):
         with patch('src.ragspace.ui.handlers.get_rag_manager') as mock_get_rag:
             mock_rag = Mock()
             
-            # Create async generator
-            async def mock_generator():
-                yield "This is a test response from the mock RAG system."
+            # Mock query_with_metadata method
+            async def mock_query_with_metadata(query, docsets=None):
+                return {
+                    "status": "success",
+                    "query": query,
+                    "response": "This is a test response from the mock RAG system.",
+                    "sources": [],
+                    "metadata": {}
+                }
             
-            mock_rag.query_knowledge_base.return_value = mock_generator()
+            mock_rag.query_with_metadata = mock_query_with_metadata
             mock_get_rag.return_value = mock_rag
             
             result = ask("test query")
@@ -64,11 +70,17 @@ class TestMCPToolsUI(UIBaseTest):
         with patch('src.ragspace.ui.handlers.get_rag_manager') as mock_get_rag:
             mock_rag = Mock()
             
-            # Create async generator
-            async def mock_generator():
-                yield "Hello! This is a mock response to your greeting."
+            # Mock query_with_metadata method
+            async def mock_query_with_metadata(query, docsets=None):
+                return {
+                    "status": "success",
+                    "query": query,
+                    "response": "Hello! This is a mock response to your greeting.",
+                    "sources": [],
+                    "metadata": {}
+                }
             
-            mock_rag.query_knowledge_base.return_value = mock_generator()
+            mock_rag.query_with_metadata = mock_query_with_metadata
             mock_get_rag.return_value = mock_rag
             
             result = ask("hello", "test-docset")
@@ -80,7 +92,19 @@ class TestMCPToolsUI(UIBaseTest):
         """Test ask error handling"""
         with patch('src.ragspace.ui.handlers.get_rag_manager') as mock_get_rag:
             mock_rag = Mock()
-            mock_rag.query_knowledge_base.side_effect = Exception("❌ Mock error: This is a test error response.")
+            
+            # Mock query_with_metadata method with error
+            async def mock_query_with_metadata(query, docsets=None):
+                return {
+                    "status": "error",
+                    "query": query,
+                    "error": "❌ Mock error: This is a test error response.",
+                    "response": "",
+                    "sources": [],
+                    "metadata": {}
+                }
+            
+            mock_rag.query_with_metadata = mock_query_with_metadata
             mock_get_rag.return_value = mock_rag
             
             result = ask("error test")
@@ -93,11 +117,17 @@ class TestMCPToolsUI(UIBaseTest):
         with patch('src.ragspace.ui.handlers.get_rag_manager') as mock_get_rag:
             mock_rag = Mock()
             
-            # Create async generator
-            async def mock_generator():
-                yield "I'm a mock RAG system. I can help you with test queries."
+            # Mock query_with_metadata method
+            async def mock_query_with_metadata(query, docsets=None):
+                return {
+                    "status": "success",
+                    "query": query,
+                    "response": "I'm a mock RAG system. I can help you with test queries.",
+                    "sources": [],
+                    "metadata": {}
+                }
             
-            mock_rag.query_knowledge_base.return_value = mock_generator()
+            mock_rag.query_with_metadata = mock_query_with_metadata
             mock_get_rag.return_value = mock_rag
             
             result = ask("help me")

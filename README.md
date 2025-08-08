@@ -45,6 +45,7 @@
 - **⚙️ Configurable Crawlers**: Environment-based configuration for all crawlers
 - **🚀 Easy Deployment**: One-click deployment to Render, Railway, or Hugging Face Spaces
 - **🔍 Document Source Attribution**: Clickable source links that take you directly to the original documents
+- **🔄 Real-time Refresh**: Refresh DocSet lists to see database updates without restarting the application
 
 ## 🎯 Use Cases
 

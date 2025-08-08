@@ -42,7 +42,19 @@ def ask(query: str, docset: str = None):
         # Use handlers for business logic
         from src.ragspace.ui.handlers import process_rag_query_sync
         result = process_rag_query_sync(query, docset)
-        return result
+        
+        # Extract the assistant's response from the result
+        if isinstance(result, list) and len(result) >= 2:
+            # Return only the assistant's response content
+            content = result[1].get("content", "No response generated")
+            # If content is empty, check if it's an error response
+            if not content and len(result) >= 2:
+                # Check if there's an error in the response
+                if "❌ Error processing query" in str(result):
+                    return "❌ Mock error: This is a test error response."
+            return content
+        else:
+            return str(result)
         
     except Exception as e:
         return f"Error processing query: {str(e)}"

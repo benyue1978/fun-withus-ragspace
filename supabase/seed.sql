@@ -3,9 +3,9 @@
 
 -- Insert sample docsets
 INSERT INTO docsets (name, description) VALUES 
-  ('gradio mcp', 'Gradio MCP integration documentation'),
-  ('python examples', 'Python code examples and tutorials'),
-  ('ai knowledge base', 'AI and machine learning resources')
+  ('gradio mcp (demo)', 'Gradio MCP integration documentation'),
+  ('python examples (demo)', 'Python code examples and tutorials'),
+  ('ai knowledge base (demo)', 'AI and machine learning resources')
 ON CONFLICT (name) DO NOTHING;
 
 -- Get the docset IDs for sample documents
@@ -15,9 +15,9 @@ DECLARE
   python_docset_id uuid;
   ai_docset_id uuid;
 BEGIN
-  SELECT id INTO gradio_docset_id FROM docsets WHERE name = 'gradio mcp';
-  SELECT id INTO python_docset_id FROM docsets WHERE name = 'python examples';
-  SELECT id INTO ai_docset_id FROM docsets WHERE name = 'ai knowledge base';
+  SELECT id INTO gradio_docset_id FROM docsets WHERE name = 'gradio mcp (demo)';
+  SELECT id INTO python_docset_id FROM docsets WHERE name = 'python examples (demo)';
+  SELECT id INTO ai_docset_id FROM docsets WHERE name = 'ai knowledge base (demo)';
   
   -- Insert sample documents for gradio mcp
   INSERT INTO documents (docset_id, name, type, content) VALUES 

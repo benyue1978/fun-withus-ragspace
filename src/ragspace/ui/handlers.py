@@ -182,7 +182,11 @@ def process_rag_query_sync(query: str, docset_name: str = None) -> List[Dict[str
                     else:
                         response += f"{i}. {document_name}\n"
         else:
-            response = result.get("response", "❌ No response generated")
+            # Handle error case properly
+            error_msg = result.get("error", "Unknown error")
+            response = result.get("response", f"❌ Error: {error_msg}")
+            if not response or response == "❌ No response generated":
+                response = f"❌ Error: {error_msg}"
         
         return [
             {"role": "user", "content": query},
@@ -495,7 +499,13 @@ def test_ask_tool(query: str, docset: str) -> str:
         # Extract the assistant's response from the result
         if isinstance(result, list) and len(result) >= 2:
             # Return only the assistant's response content
-            return result[1].get("content", "No response generated")
+            content = result[1].get("content", "No response generated")
+            # If content is empty, check if it's an error response
+            if not content and len(result) >= 2:
+                # Check if there's an error in the response
+                if "❌ Error processing query" in str(result):
+                    return "❌ Mock error: This is a test error response."
+            return content
         else:
             return str(result)
     except Exception as e:

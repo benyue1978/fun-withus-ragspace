@@ -85,19 +85,29 @@ class KnowledgeManagementComponent(BaseComponent):
         # DocSet selection
         gr.Markdown("### 🎯 Select DocSet")
         
-        docset_list = gr.Dropdown(
-            choices=initial_data["choices"],
-            value=initial_data["selected"],
-            label="📚 Available DocSets",
-            interactive=True,
-            elem_classes=["input-modern"]
-        )
+        with gr.Row():
+            docset_list = gr.Dropdown(
+                choices=initial_data["choices"],
+                value=initial_data["selected"],
+                label="📚 Available DocSets",
+                interactive=True,
+                elem_classes=["input-modern"]
+            )
+        
+        with gr.Row():    
+            refresh_docsets_button = gr.Button(
+                "🔄 Refresh DataSets",
+                variant="primary",
+                size="lg",
+                elem_classes=["button-primary"]
+            )
         
         # Register components
         self.add_component("create_docset_name", create_docset_name)
         self.add_component("create_docset_button", create_docset_button)
         self.add_component("create_docset_output", create_docset_output)
         self.add_component("docset_list", docset_list)
+        self.add_component("refresh_docsets_button", refresh_docsets_button)
     
     def _create_documents_section(self, initial_data: Dict[str, Any]):
         """Create documents section"""
@@ -287,6 +297,7 @@ class KnowledgeManagementComponent(BaseComponent):
         create_docset_name = self.get_component("create_docset_name")
         create_docset_output = self.get_component("create_docset_output")
         docset_list = self.get_component("docset_list")
+        refresh_docsets_button = self.get_component("refresh_docsets_button")
         refresh_docs_button = self.get_component("refresh_docs_button")
         trigger_embedding_button = self.get_component("trigger_embedding_button")
         documents_list = self.get_component("documents_list")
@@ -314,6 +325,7 @@ class KnowledgeManagementComponent(BaseComponent):
         # Setup event handlers
         self._setup_docset_events(create_docset_button, create_docset_name, create_docset_output, docset_list)
         self._setup_document_events(docset_list, refresh_docs_button, trigger_embedding_button, documents_list, selected_docset_info)
+        self._setup_docsets_refresh_events(refresh_docsets_button, docset_list)
         self._setup_upload_events(file_input, file_output, upload_docset_name, url_button, url_input, website_type, url_output, url_docset_name, github_button, github_input, branch_input, github_output, github_docset_name)
     
     def _setup_docset_events(self, create_button, name_input, output, docset_list):
@@ -324,6 +336,16 @@ class KnowledgeManagementComponent(BaseComponent):
             create_docset,
             [name_input],
             [output, docset_list],
+            api_name=False
+        )
+    
+    def _setup_docsets_refresh_events(self, refresh_button, docset_list):
+        """Setup DocSets refresh events"""
+        from src.ragspace.ui.handlers import update_docset_lists
+        
+        refresh_button.click(
+            update_docset_lists,
+            outputs=docset_list,
             api_name=False
         )
     
