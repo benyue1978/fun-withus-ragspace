@@ -72,8 +72,8 @@ class RAGResponseGenerator:
                 yield "❌ No relevant information found in the knowledge base. Please try rephrasing your question or add more documents to the knowledge base."
                 return
             
-            # Assemble context from chunks
-            context = self._assemble_context(chunks)
+            # Assemble context from chunks with source information
+            context = self._assemble_context_with_sources(chunks)
             
             # Generate response
             if stream:
@@ -87,9 +87,95 @@ class RAGResponseGenerator:
             logger.error(f"❌ Error generating response: {e}")
             yield f"❌ Error generating response: {str(e)}"
     
+    def _assemble_context_with_sources(self, chunks: List[Dict]) -> str:
+        """
+        Assemble context from retrieved chunks with source information
+        
+        Args:
+            chunks: List of retrieved chunks
+            
+        Returns:
+            Assembled context string with source attribution
+        """
+        context_parts = []
+        
+        for i, chunk in enumerate(chunks):
+            # Generate source URL
+            source_url = self._generate_source_url(chunk)
+            source_info = f"Source {i+1}: {chunk.get('document_name', 'Unknown')} ({source_url})"
+            
+            content = chunk.get('content', '')
+            
+            # Truncate content if too long
+            if len(content) > 800:
+                content = content[:800] + "..."
+            
+            context_parts.append(f"{source_info}\n{content}\n")
+        
+        context = "\n".join(context_parts)
+        
+        # Limit context length
+        if len(context) > self.max_context_length:
+            context = context[:self.max_context_length] + "..."
+        
+        return context
+    
+    def _generate_source_url(self, chunk: Dict) -> str:
+        """
+        Generate clickable source URL based on chunk metadata
+        
+        Args:
+            chunk: Chunk dictionary with metadata
+            
+        Returns:
+            Source URL string
+        """
+        metadata = chunk.get('metadata', {})
+        source_type = metadata.get('source_type', 'unknown')
+        
+        if source_type == "github":
+            # Build GitHub URL from metadata
+            owner = metadata.get('owner', '')
+            repo = metadata.get('repo', '')
+            path = metadata.get('path', '')
+            branch = metadata.get('branch', '') or 'main'  # Handle empty string case
+            
+            if owner and repo and path:
+                base_url = f"https://github.com/{owner}/{repo}/blob/{branch}/{path}"
+                start_line = metadata.get('start_line')
+                end_line = metadata.get('end_line')
+                
+                if start_line and end_line:
+                    return f"{base_url}#L{start_line}-L{end_line}"
+                elif start_line:
+                    return f"{base_url}#L{start_line}"
+                else:
+                    return base_url
+            else:
+                # Fallback to document name if GitHub info is incomplete
+                document_name = chunk.get('document_name', 'Unknown')
+                return f"GitHub: {document_name}"
+        
+        elif source_type == "website":
+            return metadata.get('url', '')
+        
+        elif source_type == "file":
+            # For uploaded files, return document info
+            document_name = chunk.get('document_name', 'Unknown')
+            return f"Document: {document_name}"
+        
+        else:
+            # Fallback to URL or document name
+            url = metadata.get('url', '')
+            if url:
+                return url
+            else:
+                document_name = chunk.get('document_name', 'Unknown')
+                return f"Document: {document_name}"
+    
     def _assemble_context(self, chunks: List[Dict]) -> str:
         """
-        Assemble context from retrieved chunks
+        Assemble context from retrieved chunks (legacy method)
         
         Args:
             chunks: List of retrieved chunks
@@ -243,16 +329,16 @@ Please provide a comprehensive answer based on the context above."""
                     }
                 }
             
-            # Assemble context
-            context = self._assemble_context(chunks)
+            # Assemble context with source information
+            context = self._assemble_context_with_sources(chunks)
             
             # Generate response
             generation_start = time.time()
             response = await self._generate_complete_response(query, context, conversation_history)
             generation_time = time.time() - generation_start
             
-            # Prepare sources
-            sources = self._prepare_sources(chunks)
+            # Prepare sources with enhanced information
+            sources = self._prepare_sources_with_urls(chunks)
             
             # Calculate total time
             total_time = time.time() - start_time
@@ -283,8 +369,26 @@ Please provide a comprehensive answer based on the context above."""
                 "metadata": {}
             }
     
+    def _prepare_sources_with_urls(self, chunks: List[Dict]) -> List[Dict]:
+        """Prepare source information with URLs for response"""
+        sources = []
+        
+        for chunk in chunks:
+            source_url = self._generate_source_url(chunk)
+            source = {
+                "document_name": chunk.get("document_name", "Unknown"),
+                "docset_name": chunk.get("docset_name", "Unknown"),
+                "source_url": source_url,
+                "content_preview": chunk.get("content", "")[:200] + "..." if len(chunk.get("content", "")) > 200 else chunk.get("content", ""),
+                "chunk_index": chunk.get("chunk_index", 0),
+                "metadata": chunk.get("metadata", {})
+            }
+            sources.append(source)
+        
+        return sources
+    
     def _prepare_sources(self, chunks: List[Dict]) -> List[Dict]:
-        """Prepare source information for response"""
+        """Prepare source information for response (legacy method)"""
         sources = []
         
         for chunk in chunks:

@@ -44,6 +44,7 @@
 - **🗄️ Supabase Database**: Persistent storage with PostgreSQL and real-time capabilities
 - **⚙️ Configurable Crawlers**: Environment-based configuration for all crawlers
 - **🚀 Easy Deployment**: One-click deployment to Render, Railway, or Hugging Face Spaces
+- **🔍 Document Source Attribution**: Clickable source links that take you directly to the original documents
 
 ## 🎯 Use Cases
 
@@ -64,6 +65,40 @@
 - **Technical Communities**: Share knowledge with the community
 - **Educational Content**: Build learning resource collections
 - **Niche Technology**: Document rare or specialized technologies
+
+## 🔍 Document Source Attribution
+
+RAGSpace includes advanced document source attribution that provides clickable links back to the original sources:
+
+### GitHub Source Attribution
+- **Line Number Links**: Direct links to specific lines in GitHub files (e.g., `#L15-L25`)
+- **Repository Information**: Preserves repo, branch, and file path information
+- **Commit Tracking**: Maintains commit SHA for version control
+- **Code Snippets**: Precise line number tracking for code documentation
+
+### Website Source Attribution
+- **URL Preservation**: Maintains original website URLs
+- **Page Titles**: Preserves document titles and metadata
+- **Content Structure**: Tracks content depth and organization
+
+### File Upload Attribution
+- **Document Names**: Preserves original file names
+- **Upload Metadata**: Tracks file type, size, and upload date
+- **Content Organization**: Maintains document structure
+
+### Example Source Attribution
+When you ask a question, RAGSpace provides responses with clickable source links:
+
+```
+Question: "How do I implement authentication?"
+
+Response: "To implement authentication, you need to use JWT tokens..."
+
+Sources:
+1. [README.md](https://github.com/user/repo/blob/main/README.md#L45-L52)
+2. [auth.js](https://github.com/user/repo/blob/main/src/auth.js#L1-L20)
+3. [API Documentation](https://docs.example.com/api/authentication)
+```
 
 ## 📖 How to Use
 

@@ -73,7 +73,15 @@ RAGSpace is a modular RAG (Retrieval-Augmented Generation) system that enables u
 - [x] End-to-end RAG workflow testing
 - [x] Auto-refresh functionality for Add Content operations
 
-### Phase 5: Advanced Features 📋 PLANNED
+### Phase 5: Document Source Attribution ✅ COMPLETED
+- [x] Enhanced metadata storage with source information
+- [x] Source URL generation for GitHub, website, and file sources
+- [x] Line number tracking for GitHub files
+- [x] Source attribution in RAG responses
+- [x] UI integration with source display
+- [x] Clickable source links in chat interface
+
+### Phase 6: Advanced Features 📋 PLANNED
 - [ ] Multi-user authentication
 - [ ] Knowledge base management
 - [ ] Community sharing features
@@ -114,9 +122,10 @@ RAGSpace is a modular RAG (Retrieval-Augmented Generation) system that enables u
 - **RAG Engine**: Complete RAG implementation with vector search, LLM integration, and hybrid retrieval
 - **RAG-UI Integration**: Complete integration of RAG services with UI components
 - **UI Enhancements**: Auto-refresh functionality for Add Content operations, improved error handling, and better user experience
+- **Document Source Attribution**: Complete source attribution system with UI integration
 
 ### 📋 Next Steps
-- **Phase 5 Implementation**: Add multi-user support and advanced features
+- **Phase 6 Implementation**: Add multi-user support and advanced features
 - **Production Deployment**: Deploy to Hugging Face Spaces or Railway
 - **Community Features**: Add multi-user support and sharing capabilities
 
@@ -148,7 +157,22 @@ RAGSpace is a modular RAG (Retrieval-Augmented Generation) system that enables u
 - **UI Feedback**: Real-time status and progress indicators
 - **Auto-refresh**: Automatic UI updates after content operations
 
+### Document Source Attribution
+- **Enhanced Metadata**: Comprehensive source information storage
+- **URL Generation**: Intelligent URL generation for all content types
+- **Line Number Tracking**: Precise line number tracking for GitHub files
+- **UI Integration**: Source information displayed in chat responses
+- **Clickable Links**: Direct links to original sources in user interface
+
 ## Recent Improvements (August 2025)
+
+### Document Source Attribution (2025-08-08)
+- **UI Integration**: Updated chat handlers to display source information in responses
+- **Source URL Display**: Users now see clickable source links in chat responses
+- **Enhanced Response Format**: Responses now include "Sources" section with clickable links
+- **GitHub Integration**: Direct links to GitHub files with line numbers
+- **Website Integration**: Direct links to original web pages
+- **File Integration**: Document name preservation for uploaded files
 
 ### UI/UX Enhancements
 - **Auto-refresh Functionality**: Add Content buttons now automatically refresh documents list and DocSet overview after completion
@@ -178,13 +202,15 @@ RAGSpace is a modular RAG (Retrieval-Augmented Generation) system that enables u
 5. **Response Generation**: LLM integration with context assembly
 6. **Async Processing**: Background embedding worker
 7. **Status Management**: Document processing state tracking
+8. **Source Attribution**: Complete source attribution system with UI integration
 
 ### ✅ Completed RAG-UI Integration
 1. **Knowledge Management**: Full integration with RAG services and embedding status
-2. **Chat Interface**: RAG-powered responses with metadata display
+2. **Chat Interface**: RAG-powered responses with metadata display and source attribution
 3. **MCP Tools**: Enhanced tools with RAG capabilities and embedding control
 4. **UI Feedback**: Comprehensive status indicators and progress tracking
 5. **Auto-refresh**: Automatic UI updates after content operations
+6. **Source Display**: Complete source attribution display in user interface
 
 ### 📋 Planned RAG Enhancements
 1. **Advanced Search**: Multi-modal search capabilities
@@ -194,8 +220,35 @@ RAGSpace is a modular RAG (Retrieval-Augmented Generation) system that enables u
 
 ## Update History
 
-- **2025-08-07**: Updated project status - Recent UI/UX improvements and bug fixes completed
-- **2025-08-07**: Updated project status - Phase 4 RAG-UI integration completed successfully
-- **2025-08-07**: Updated project status - Phase 3 RAG implementation completed, Phase 4 RAG-UI integration in progress
-- **2025-08-05**: Initial project setup and documentation structure
-- **2025-08-04**: Core application development and testing framework
+- **2025-08-08**: ✅ Completed Document Source Attribution UI Integration
+  - Updated chat handlers to display source information in responses
+  - Implemented source URL display in chat interface
+  - Enhanced response format with "Sources" section
+  - Verified source attribution display functionality
+
+- **2025-08-07**: ✅ Completed Document Source Attribution implementation
+  - Enhanced metadata storage with comprehensive source information
+  - Implemented source URL generation for all content types
+  - Added line number tracking for GitHub files
+  - Updated response generation with source attribution
+  - Created comprehensive test suite
+
+- **2025-08-07**: ✅ Completed Phase 4 RAG-UI integration
+  - Knowledge management integration with RAG services
+  - Chat interface enhancement with RAG
+  - MCP tools integration with RAG
+  - UI feedback and status management
+  - End-to-end RAG workflow testing
+
+- **2025-08-05**: ✅ Completed Phase 3 RAG implementation
+  - Vector database setup with pgvector
+  - Text splitting with intelligent chunking
+  - Embedding worker with async processing
+  - Retrieval system with GPT reranking
+  - Response generation with streaming support
+
+- **2025-08-04**: ✅ Completed basic system architecture
+  - Web interface with Gradio
+  - MCP server implementation
+  - Database schema design
+  - Testing framework setup

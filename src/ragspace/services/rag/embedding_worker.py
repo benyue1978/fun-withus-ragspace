@@ -234,6 +234,9 @@ class EmbeddingWorker:
             chunks_data = []
             
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+                # Enhanced metadata with source information
+                enhanced_metadata = self._enhance_chunk_metadata(chunk, document, i)
+                
                 chunk_data = {
                     "docset_name": docset_name,
                     "document_name": document.get('name', 'Unknown'),
@@ -241,7 +244,7 @@ class EmbeddingWorker:
                     "chunk_index": i,
                     "content": chunk['content'],
                     "embedding": embedding,
-                    "metadata": chunk.get('metadata', {})
+                    "metadata": enhanced_metadata
                 }
                 chunks_data.append(chunk_data)
             
@@ -263,6 +266,98 @@ class EmbeddingWorker:
         except Exception as e:
             logger.error(f"❌ Error storing chunks for document {document.get('id', 'unknown')}: {e}")
             return []
+    
+    def _enhance_chunk_metadata(self, chunk: Dict, document: Dict, chunk_index: int) -> Dict:
+        """
+        Enhance chunk metadata with source information for document attribution
+        
+        Args:
+            chunk: Original chunk metadata
+            document: Original document
+            chunk_index: Index of the chunk
+            
+        Returns:
+            Enhanced metadata dictionary
+        """
+        # Start with original chunk metadata
+        enhanced_metadata = chunk.get('metadata', {}).copy()
+        
+        # Add document-level information
+        enhanced_metadata.update({
+            "document_id": document.get('id'),
+            "document_name": document.get('name', 'Unknown'),
+            "docset_name": document.get('docset_name', 'default'),
+            "chunk_index": chunk_index,
+            "source_type": self._determine_source_type(document),
+            "url": document.get('url', ''),
+            "doc_type": document.get('type', 'file'),
+            "timestamp": document.get('added_date', ''),
+        })
+        
+        # Add source-specific information
+        source_type = enhanced_metadata.get('source_type', 'unknown')
+        
+        if source_type == "github":
+            # GitHub-specific metadata
+            enhanced_metadata.update({
+                "repo": document.get('metadata', {}).get('repo', ''),
+                "owner": document.get('metadata', {}).get('owner', ''),
+                "branch": document.get('metadata', {}).get('branch', 'main'),
+                "path": document.get('metadata', {}).get('path', ''),
+                "sha": document.get('metadata', {}).get('sha', ''),
+                "file_path": document.get('metadata', {}).get('path', ''),
+            })
+            
+            # Add line number information if available
+            if 'start_line' in chunk.get('metadata', {}):
+                enhanced_metadata['start_line'] = chunk['metadata']['start_line']
+            if 'end_line' in chunk.get('metadata', {}):
+                enhanced_metadata['end_line'] = chunk['metadata']['end_line']
+        
+        elif source_type == "website":
+            # Website-specific metadata
+            enhanced_metadata.update({
+                "title": document.get('metadata', {}).get('title', ''),
+                "depth": document.get('metadata', {}).get('depth', 0),
+                "content_size": document.get('metadata', {}).get('content_size', 0),
+            })
+        
+        elif source_type == "file":
+            # File upload-specific metadata
+            enhanced_metadata.update({
+                "file_size": document.get('metadata', {}).get('size', 0),
+                "file_type": document.get('metadata', {}).get('file_type', ''),
+                "upload_date": document.get('added_date', ''),
+            })
+        
+        return enhanced_metadata
+    
+    def _determine_source_type(self, document: Dict) -> str:
+        """
+        Determine source type based on document information
+        
+        Args:
+            document: Document dictionary
+            
+        Returns:
+            Source type string
+        """
+        doc_type = document.get('type', 'file')
+        doc_metadata = document.get('metadata', {})
+        
+        # Check metadata for GitHub information first
+        if doc_metadata.get('repo') and doc_metadata.get('owner'):
+            return 'github'
+        elif doc_metadata.get('url') and doc_type in ['website', 'url']:
+            return 'website'
+        elif doc_type == 'file':
+            return 'file'
+        elif doc_type in ['github_file', 'github_readme', 'github_repo']:
+            return 'github'
+        elif doc_type in ['website', 'url']:
+            return 'website'
+        else:
+            return 'unknown'
     
     def get_embedding_status_summary(self, docset_name: Optional[str] = None) -> Dict[str, int]:
         """

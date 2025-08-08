@@ -47,34 +47,32 @@ class RAGTextSplitter:
     
     def split_text(self, text: str, content_type: str = "text") -> List[Dict]:
         """
-        Split text into chunks based on content type
+        Split text into chunks with metadata
         
         Args:
             text: Text to split
-            content_type: Type of content ('text', 'code', 'markdown')
+            content_type: Type of content (text, code, markdown)
             
         Returns:
             List of chunk dictionaries with metadata
         """
-        if not text or not text.strip():
-            return []
+        # Store original text for line number calculation
+        original_text = text
         
-        # Choose configuration based on content type
-        if content_type == "code":
-            config = self.code_config
-        elif content_type == "markdown":
-            config = self.markdown_config
-        else:
-            config = self.text_config
-        
-        # Clean and normalize text
+        # Clean text for chunking
         text = self._clean_text(text)
         
-        # Split text into chunks
+        if not text.strip():
+            return []
+        
+        # Get configuration for content type
+        config = self._get_config_for_content_type(content_type)
+        
+        # Split text
         chunks = self._split_by_separators(text, config)
         
-        # Add metadata to chunks
-        return self._add_chunk_metadata(chunks, content_type)
+        # Add metadata with line number tracking using original text
+        return self._add_chunk_metadata_with_line_numbers(chunks, content_type, original_text)
     
     def _clean_text(self, text: str) -> str:
         """Clean and normalize text"""
@@ -136,8 +134,67 @@ class RAGTextSplitter:
         
         return parts
     
+    def _add_chunk_metadata_with_line_numbers(self, chunks: List[str], content_type: str, original_text: str) -> List[Dict]:
+        """Add metadata to chunks with line number tracking"""
+        result = []
+        
+        # Split original text into lines for line number calculation
+        original_lines = original_text.split('\n')
+        
+        current_pos = 0
+        
+        for i, chunk in enumerate(chunks):
+            # Calculate line numbers for this chunk
+            start_line, end_line = self._calculate_line_numbers(original_text, current_pos, len(chunk))
+            
+            metadata = {
+                "chunk_index": i,
+                "content_type": content_type,
+                "chunk_size": len(chunk),
+                "word_count": len(chunk.split()),
+                "has_code": self._contains_code(chunk),
+                "has_markdown": self._contains_markdown(chunk),
+                "start_line": start_line,
+                "end_line": end_line,
+                "start_char": current_pos,
+                "end_char": current_pos + len(chunk),
+            }
+            
+            result.append({
+                "content": chunk,
+                "metadata": metadata
+            })
+            
+            # Update position for next chunk
+            current_pos += len(chunk)
+        
+        return result
+    
+    def _calculate_line_numbers(self, text: str, start_char: int, chunk_length: int) -> tuple[int, int]:
+        """
+        Calculate line numbers for a chunk based on character positions
+        
+        Args:
+            text: Original text
+            start_char: Starting character position
+            chunk_length: Length of the chunk
+            
+        Returns:
+            Tuple of (start_line, end_line) (1-indexed)
+        """
+        # Count newlines before the start position
+        text_before_start = text[:start_char]
+        start_line = text_before_start.count('\n') + 1
+        
+        # Count newlines in the chunk
+        chunk_text = text[start_char:start_char + chunk_length]
+        newlines_in_chunk = chunk_text.count('\n')
+        end_line = start_line + newlines_in_chunk
+        
+        return start_line, end_line
+    
     def _add_chunk_metadata(self, chunks: List[str], content_type: str) -> List[Dict]:
-        """Add metadata to chunks"""
+        """Add metadata to chunks (legacy method)"""
         result = []
         
         for i, chunk in enumerate(chunks):
@@ -234,3 +291,20 @@ class RAGTextSplitter:
                 return 'markdown'
             else:
                 return 'text'
+
+    def _get_config_for_content_type(self, content_type: str) -> ChunkConfig:
+        """
+        Get configuration for specific content type
+        
+        Args:
+            content_type: Type of content (text, code, markdown)
+            
+        Returns:
+            ChunkConfig for the content type
+        """
+        if content_type == "code":
+            return self.code_config
+        elif content_type == "markdown":
+            return self.markdown_config
+        else:
+            return self.text_config

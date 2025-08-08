@@ -502,6 +502,184 @@ def create_embedding_status_ui():
     return status_ui
 ```
 
+## NEW: Document Source Attribution System 📋 PLANNED
+
+### 1. Source Attribution Architecture
+
+#### 1.1 Enhanced Metadata Structure
+```python
+# Enhanced chunk metadata with source attribution
+chunk_metadata = {
+    "document_name": "README.md",
+    "docset_name": "python_tutorial",
+    "source_type": "github",  # github, website, file
+    "url": "https://github.com/user/repo/blob/main/README.md",
+    "file_path": "docs/README.md",
+    "start_line": 52,
+    "end_line": 78,
+    "chunk_index": 3,
+    "language": "markdown",
+    "repo": "user/repo",
+    "branch": "main",
+    "commit_id": "abc123...",
+    "timestamp": "2024-12-01T13:00:00Z",
+    "doc_type": "github_file",
+    "source_url": "https://github.com/user/repo/blob/main/README.md#L52-L78"
+}
+```
+
+#### 1.2 Source URL Generation
+```python
+def generate_source_url(chunk_metadata: Dict) -> str:
+    """Generate clickable source URL based on metadata"""
+    source_type = chunk_metadata.get("source_type", "unknown")
+    
+    if source_type == "github":
+        base_url = chunk_metadata.get("url", "")
+        start_line = chunk_metadata.get("start_line")
+        end_line = chunk_metadata.get("end_line")
+        
+        if start_line and end_line:
+            return f"{base_url}#L{start_line}-L{end_line}"
+        elif start_line:
+            return f"{base_url}#L{start_line}"
+        else:
+            return base_url
+    
+    elif source_type == "website":
+        return chunk_metadata.get("url", "")
+    
+    elif source_type == "file":
+        # For uploaded files, return document info
+        return f"Document: {chunk_metadata.get('document_name', 'Unknown')}"
+    
+    else:
+        return chunk_metadata.get("url", "Unknown source")
+```
+
+#### 1.3 Enhanced Response Generation with Sources
+```python
+def generate_response_with_sources(query: str, chunks: List[Dict]) -> Dict[str, Any]:
+    """Generate response with source attribution"""
+    
+    # Assemble context with source information
+    context_parts = []
+    sources = []
+    
+    for i, chunk in enumerate(chunks):
+        # Build source info
+        source_url = generate_source_url(chunk.get("metadata", {}))
+        source_info = f"Source {i+1}: {chunk.get('document_name', 'Unknown')} ({source_url})"
+        
+        # Add to context
+        context_parts.append(f"{source_info}\n{chunk.get('content', '')}\n")
+        
+        # Prepare source for response
+        sources.append({
+            "document_name": chunk.get("document_name", "Unknown"),
+            "docset_name": chunk.get("docset_name", "Unknown"),
+            "source_url": source_url,
+            "content_preview": chunk.get("content", "")[:200] + "..." if len(chunk.get("content", "")) > 200 else chunk.get("content", ""),
+            "chunk_index": chunk.get("chunk_index", 0),
+            "metadata": chunk.get("metadata", {})
+        })
+    
+    context = "\n".join(context_parts)
+    
+    # Generate LLM response
+    response = generate_llm_response(query, context)
+    
+    return {
+        "response": response,
+        "sources": sources,
+        "context": context
+    }
+```
+
+#### 1.4 UI Source Display
+```python
+def display_response_with_sources(response_data: Dict[str, Any]) -> str:
+    """Display response with clickable source links"""
+    
+    response = response_data.get("response", "")
+    sources = response_data.get("sources", [])
+    
+    # Build markdown with sources
+    markdown_content = f"{response}\n\n"
+    
+    if sources:
+        markdown_content += "## Sources\n\n"
+        
+        for i, source in enumerate(sources, 1):
+            source_url = source.get("source_url", "")
+            document_name = source.get("document_name", "Unknown")
+            
+            if source_url and source_url != "Unknown source":
+                markdown_content += f"{i}. [{document_name}]({source_url})\n"
+            else:
+                markdown_content += f"{i}. {document_name}\n"
+    
+    return markdown_content
+```
+
+### 2. Implementation Plan for Source Attribution
+
+#### Phase 1: Enhanced Metadata Storage ✅ IMPLEMENTED
+- [x] Update chunk metadata structure to include source URLs
+- [x] Modify embedding worker to preserve source information
+- [x] Update text splitter to maintain line number information
+- [x] Enhance document processing to capture source metadata
+
+#### Phase 2: Source URL Generation 📋 PLANNED
+- [ ] Implement source URL generation for different content types
+- [ ] Add GitHub-specific URL formatting with line numbers
+- [ ] Add website URL preservation
+- [ ] Add file upload source attribution
+
+#### Phase 3: Enhanced Response Generation 📋 PLANNED
+- [ ] Update RAG response generator to include source information
+- [ ] Modify context assembly to include source URLs
+- [ ] Add source attribution to streaming responses
+- [ ] Implement source metadata in MCP responses
+
+#### Phase 4: UI Integration 📋 PLANNED
+- [ ] Update chat interface to display source links
+- [ ] Add source preview in knowledge management
+- [ ] Implement clickable source links in MCP tools
+- [ ] Add source filtering and search capabilities
+
+### 3. Source Attribution Features
+
+#### 3.1 GitHub Source Attribution
+```python
+# GitHub file with line numbers
+source_url = "https://github.com/user/repo/blob/main/src/main.py#L15-L25"
+
+# GitHub README with section
+source_url = "https://github.com/user/repo/blob/main/README.md#installation"
+
+# GitHub repository overview
+source_url = "https://github.com/user/repo"
+```
+
+#### 3.2 Website Source Attribution
+```python
+# Website page
+source_url = "https://docs.example.com/getting-started"
+
+# Website with anchor
+source_url = "https://docs.example.com/api#authentication"
+```
+
+#### 3.3 File Upload Source Attribution
+```python
+# Uploaded file
+source_url = "Document: README.md (Uploaded File)"
+
+# File with metadata
+source_url = "Document: config.yaml (Uploaded: 2024-12-01)"
+```
+
 ## Data Flow
 
 ### 1. Knowledge Ingestion Flow ✅ IMPLEMENTED
@@ -525,6 +703,12 @@ Storage Layer → Response → MCP Client
 ### 4. RAG-UI Integration Flow 🔄 IN PROGRESS
 ```
 UI Component → RAG Service → Vector Search → Response Generation → UI Display
+```
+
+### 5. NEW: Source Attribution Flow 📋 PLANNED
+```
+Chunk Retrieval → Source URL Generation → Context Assembly → 
+Response Generation → Source Display → User Interaction
 ```
 
 ## Security Architecture
@@ -688,6 +872,7 @@ RAG_CHUNK_OVERLAP=100
 1. **Advanced Search**: Hybrid search capabilities
 2. **Production Deployment**: Hugging Face Spaces or Railway
 3. **Community Features**: Multi-user support and sharing
+4. **Source Attribution**: Enhanced document source tracking and display
 
 ## Performance Metrics
 
@@ -707,6 +892,7 @@ RAG_CHUNK_OVERLAP=100
 
 ## Update History
 
+- **2025-08-07**: Added Document Source Attribution System design and implementation plan
 - **2025-08-07**: Updated architecture with RAG-UI integration plan and current status
 - **2025-08-07**: Updated architecture with detailed RAG system design
 - **2025-08-05**: Initial architecture design and documentation

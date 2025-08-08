@@ -107,7 +107,7 @@ def add_github_repo_to_docset(repo_url: str, docset_name: str, branch: str = "ma
 
 # RAG Business Logic Functions
 async def process_rag_query(query: str, history, docset_name: str = None) -> tuple:
-    """Process user query using RAG and return response - UI handler"""
+    """Process user query using RAG and return response with sources - UI handler"""
     if not query.strip():
         return history, ""
     
@@ -118,13 +118,26 @@ async def process_rag_query(query: str, history, docset_name: str = None) -> tup
         # Convert single docset_name to list format for RAG manager
         docsets = [docset_name] if docset_name else None
         
-        # Process query with RAG - handle async generator
-        response_chunks = []
-        async for chunk in rag_manager.query_knowledge_base(query, docsets):
-            response_chunks.append(chunk)
+        # Get response with metadata (including sources)
+        result = await rag_manager.query_with_metadata(query, docsets)
         
-        # Combine all chunks into a single response
-        response = "".join(response_chunks)
+        if result.get("status") == "success":
+            response = result.get("response", "")
+            sources = result.get("sources", [])
+            
+            # Build response with sources
+            if sources:
+                response += "\n\n## Sources\n\n"
+                for i, source in enumerate(sources, 1):
+                    source_url = source.get("source_url", "")
+                    document_name = source.get("document_name", "Unknown")
+                    
+                    if source_url and source_url != "Unknown source":
+                        response += f"{i}. [{document_name}]({source_url})\n"
+                    else:
+                        response += f"{i}. {document_name}\n"
+        else:
+            response = result.get("response", "❌ No response generated")
         
         # Return the updated history with new messages in dictionary format for Gradio Chatbot
         new_history = history + [
@@ -142,19 +155,34 @@ async def process_rag_query(query: str, history, docset_name: str = None) -> tup
         return new_history, ""
 
 def process_rag_query_sync(query: str, docset_name: str = None) -> List[Dict[str, str]]:
-    """Synchronous version of RAG query processing for MCP tools"""
+    """Synchronous version of RAG query processing with sources for MCP tools"""
     try:
         rag_manager = get_rag_manager()
         # Convert single docset_name to list format for RAG manager
         docsets = [docset_name] if docset_name else None
-        response_chunks = []
         
         async def get_response():
-            async for chunk in rag_manager.query_knowledge_base(query, docsets):
-                response_chunks.append(chunk)
+            return await rag_manager.query_with_metadata(query, docsets)
         
-        asyncio.run(get_response())
-        response = "".join(response_chunks)
+        result = asyncio.run(get_response())
+        
+        if result.get("status") == "success":
+            response = result.get("response", "")
+            sources = result.get("sources", [])
+            
+            # Build response with sources
+            if sources:
+                response += "\n\n## Sources\n\n"
+                for i, source in enumerate(sources, 1):
+                    source_url = source.get("source_url", "")
+                    document_name = source.get("document_name", "Unknown")
+                    
+                    if source_url and source_url != "Unknown source":
+                        response += f"{i}. [{document_name}]({source_url})\n"
+                    else:
+                        response += f"{i}. {document_name}\n"
+        else:
+            response = result.get("response", "❌ No response generated")
         
         return [
             {"role": "user", "content": query},
