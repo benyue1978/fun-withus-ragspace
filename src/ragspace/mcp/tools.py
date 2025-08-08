@@ -34,7 +34,13 @@ def list_docsets():
         return f"Error listing docsets: {str(e)}"
 
 def ask(query: str, docset: str = None):
-    """Query the knowledge base using RAG - MCP tool interface"""
+    """Query the knowledge base using RAG - MCP tool interface
+    Args:
+        query: The query to ask, in natural language
+        docset: The docset to ask. The available docset names can be obtained from list_docsets()
+    Returns:
+        The response from the RAG
+    """
     try:
         if not query.strip():
             return "Please provide a query."
